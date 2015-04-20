@@ -1,0 +1,32 @@
+body{
+	background: url("../image/bg2.jpg") center no-repeat;
+	background-size: cover;
+}
+.signin{
+	width:330px;
+	margin:auto;
+	margin-top:100px;
+	background: rgba(0,0,0,0.5);
+	border-radius: 5px;
+	padding:20px;
+	box-shadow: 0 0 20px #fff;
+	color:#fff;
+	overflow: hidden;
+}
+.signin h2{
+	text-align: center;
+}
+.signin .input{
+	padding: 10px 0;
+}
+select{
+	color: #000;
+	width: 100%;
+	height: 34px;
+	border-radius: 0 4px 4px 0;
+}
+.signin a{
+	color: #fff;
+	text-decoration: none;
+	display: block;
+}

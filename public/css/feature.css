@@ -1,0 +1,36 @@
+.sidebar-nav{
+	float:left;
+	width:200px;
+	text-align: center;
+}
+.center_content{
+	width: 1200px;
+	margin:auto;
+}
+.right_content{	
+	height: 560px;
+	border:1px solid #428bca;
+	background: #fff !important;
+}
+.navbar{
+	margin-bottom: 10px;
+}
+nav.navbar-inverse{
+	background:#428bca;
+	border-color:#428bca;
+}
+.navbar-inverse .navbar-nav>li>a{
+	color: #fff ;
+}
+.list-group-item{
+	padding: 5px 15px;
+}
+.panel{
+	margin-bottom: 10px;
+}
+.panel-heading{
+	padding: 5px 15px;
+}
+.panel-content{
+	margin:10px;
+}

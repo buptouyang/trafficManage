@@ -1,0 +1,110 @@
+nav.navbar-inverse{
+	background:#428bca;
+	border-color: #428bca;
+}
+.navbar-inverse .navbar-nav>li>a{
+	color: #fff !important;
+}
+.container{
+
+}
+body{
+	background: url("../image/extra_clean_paper.png");
+}
+.feature{
+	width:200px;
+	margin-right: 20px;
+}
+.feature_content{
+	height: 480px;
+}
+.sample .feature_content{
+	background: #208ed3;
+}
+.mould .feature_content{
+	background-color: #FF7AA7;
+}
+.experiment .feature_content{
+	background-color: #91C233;
+	overflow: hidden;
+}
+.experiment{
+	width: 800px;
+	margin:auto;
+}
+.experiment .feature_part{
+	width:250px;
+	float: left;
+}
+.result .feature_content{
+	background:#861BFA;
+}
+
+.feature_box {
+	margin: 40px 0 20px 0;
+	position: relative;
+}
+.feature_box .feature_icon {
+	background-color:#fff;
+	width: 100px;
+	height: 100px;
+position: absolute;
+left: 50%;
+margin-left: -58px;
+top: -44px;
+margin-top: 4px;
+margin-bottom: -70px;
+-webkit-border-radius: 50em;
+-moz-border-radius: 50em;
+border-radius: 50em;
+-webkit-box-shadow: 0 0 6px 1px rgba(0,0,0,.1);
+-moz-box-shadow: 0 0 6px 1px rgba(0,0,0,.1);
+box-shadow: 0 0 6px 1px rgba(0,0,0,.1);
+}
+.feature-pic {
+	background: url('../image/ControlPanel.png') center;
+	width: 100px;
+height: 100px;
+display: inline-block;
+background-repeat: no-repeat;
+border-radius: 100px;
+}
+.mould .feature-pic {
+	background: url('../image/mission.png') center;
+}
+
+.result .feature-pic {
+	background: url('../image/daily.png') center;
+}
+.experiment .feature-pic {
+	background: url('../image/internet-explorer.png') center no-repeat;
+}
+.sample .feature-pic {
+	background: url('../image/text.png') center;
+}
+.icon32_25 {
+	background-position: -768px 0;
+}
+.feature_box .feature_content {
+	margin: 12px 0;
+	padding: 60px 0px 40px 50px;
+	-webkit-border-radius: 2px;
+	-moz-border-radius: 2px;
+	border-radius: 2px;
+	color: #fff;
+	
+}
+.item_name {
+	font-size: 32px;
+line-height: 32px;
+margin: 15px 0;
+text-align: center;
+}
+.feature_part{
+	height: 100px;
+	margin-bottom: 10px;
+}	
+.part_desc a{
+	color:#fff;
+	font-size: 20px;
+}
