@@ -1,0 +1,39 @@
+<div class="timePick">
+	<div class="panel panel-primary">
+	  <!-- Default panel contents -->
+	  <div class="panel-heading"> <span class="caret"></span>真实流量源</div>
+	  <div class="panel-content">
+			<table class="table">
+			    <thead>
+			    	<tr>
+			    	<th>编号</th><th>真实流量名称</th><th>描述</th><th>开始时间</th><th>结束时间</th><th>操作</th>
+			    	</tr>
+			    </thead>
+			    <tbody>
+<tr><td>1</td><td>北京电信</td><td>北京电信流量</td><td>2014-03-03</td><td>2015-05-05</td><td><button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button><a class="btn btn-info" href="#/realTraffic">查询</a></td><input type="hidden" id="sequence" value="1"></tr>
+		        </tbody>
+			</table>
+	  </div>
+	</div>		
+</div>  
+
+<div class="modal fade" id="emulateModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">仿真流量</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label class="control-label">名称:</label>
+            <input type="text" class="form-control" id="newSubseqName">
+          </div>	          
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>
+        <button type="button" class="btn btn-primary" id="newSubseq">新建</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -4,6 +4,7 @@
 	<title>流量仿真系统</title>
 	<meta charset="utf-8">
 	<script src="js/jquery-1.11.1.js"></script>
+	<script src="js/bootstrap.min.js"></script>
 	<script src="js/lib/angular.js"></script>
 	<script src="js/lib/angular-route.js"></script>
 	<script src="js/esl.js"></script>
@@ -18,7 +19,8 @@
 	    	<!-- <img src="image/logoa.png" style="float:left"/> -->
 	    	<a class="navbar-brand" href="#" style="color: #fff;margin:5px 10px;font-size:25px;">流量仿真系统</a>
 	    	<ul class="nav navbar-nav navbar-right">
-		        <li><a href="#/main">返回主页</a></li>
+	    		<li><a href="#/trafficManage">真实流量源</a></li>
+		        <li><a href="#/emulate">仿真管理</a></li>
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">设置 <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
@@ -32,5 +34,6 @@
 	<div class="container" ng-view>
 		
 	</div>
+
 </body>
 </html>

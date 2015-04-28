@@ -32,5 +32,9 @@ nav.navbar-inverse{
 	padding: 5px 15px;
 }
 .panel-content{
-	margin:10px;
+	margin:5px;
+}
+.searchHelp{
+	padding-bottom: 5px;
+	border-bottom: 1px solid #428bca;
 }

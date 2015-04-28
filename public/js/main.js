@@ -1,4 +1,11 @@
 var routeApp = angular.module('mainContent',['ngRoute']);
+require.config({
+    paths:{
+        echarts:'js/echarts',
+        'echarts/chart/line' : 'js/echarts',
+        'echarts/chart/pie' : 'js/echarts'
+    }
+});
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
 	.when('/feature/:type',{
@@ -12,6 +19,18 @@ routeApp.config(['$routeProvider',function($routeProvider){
 	.when('/main',{
 		templateUrl:'tpl/feature.html',
 		controller:'featureCtl'
+	})
+	.when('/emulate',{
+		templateUrl:'tpl/emulation.html',
+		controller:'emulateCtl'
+	})
+	.when('/trafficManage',{
+		templateUrl:'tpl/trafficManage.html',
+		controller:'realCtl'
+	})
+	.when('/realTraffic',{
+		templateUrl:'tpl/realTraffic.html',
+		controller:'realCtl'
 	})
 }]);
 routeApp.controller('featureChartCtl',function($scope,$routeParams,$http){
@@ -103,14 +122,7 @@ routeApp.controller('featureChartCtl',function($scope,$routeParams,$http){
 			var endSec=endTime[12]+endTime[13];$("#endSec").val(endSec)
 
 		}
-	});
-	require.config({
-        paths:{
-            echarts:'js/echarts',
-            'echarts/chart/line' : 'js/echarts',
-            'echarts/chart/pie' : 'js/echarts'
-        }
-    });	
+	});	
     function drawLine(dataValue){
     	var xdata =new Array();	
 		$.each(dataValue,function(index,item){
@@ -248,5 +260,92 @@ routeApp.controller('loginCtl',function($scope,$http){
 
 });
 routeApp.controller('featureCtl',function($scope,$http){
+
+});
+routeApp.controller('realCtl',function($scope,$http){
+	var option = {
+        title : {
+            text: '流量'
+        },
+        tooltip : {
+            trigger: 'item'
+        },
+        legend: {
+            data:['北京电信']
+        },
+        toolbox: {
+            show : false
+        },
+        calculable : true,
+        xAxis : [
+            {
+                type : 'category',
+                name:"时间",                       
+                data:['','','','','','']
+            }
+        ],
+        yAxis : [
+            {
+                type : 'value',
+                axisLabel : {
+                    formatter: '{value}'
+                },
+                splitArea : {show : true}
+            }
+        ],
+        series : [
+            {
+                name:'时间',
+                type:'line',
+                data:[1,3,3,4,5,6,8,9]
+            }
+        ]
+    };
+    require(
+        [
+            'echarts',
+            'echarts/chart/line'
+        ],
+        function (ec) {
+        	var i=0;
+            var myChart = ec.init(document.getElementById('featureChart'));
+            myChart.setOption(option);
+            $("#addTraffic").click(function(){
+            	option.legend.data.push('win'+i);
+            	option.series.push({
+            		name:'win'+i++,
+            		type:'line',
+            		data:[4,Math.random(),6,3,Math.random(),8]
+            	});
+            	myChart.setOption(option);
+            });
+            $("#deleTraffic").click(function(){
+            	/*option.legend.data.splice(0,1);
+            	option.series.splice(0,1);
+            	myChart.setOption(option);*/
+            	/*option.legend.data.push('win'+i);
+            	option.series.push({
+            		name:'win'+i++,
+            		type:'line',
+            		data:[4,6,3]
+            	});
+            	myChart.setOption(option);*/
+            	$.ajax({url:'http://wsyc.dfss.com.cn/Ajax/StuHdl.ashx?loginType=2&method=Browser&stuid=11080329&lessonid=001&cartypeid=01&carid=&ValidCode=dhdp',
+					type:'GET',
+					dataType:'json',
+					success:function(res){console.log('1')}});
+            });
+	});  
+
+
+
+
+
+});
+	
+
+	
+
+routeApp.controller('emulateCtl',function($scope,$http){
 
 });

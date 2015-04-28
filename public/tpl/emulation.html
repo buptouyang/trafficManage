@@ -1,67 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>仿真管理</title>
-	<meta charset="utf-8">
-	<script src="js/jquery-1.11.1.js"></script>
-	<script src="js/bootstrap.min.js"></script>
-	<script src="js/esl.js"></script>
-	<link rel="stylesheet" href="css/bootstrap.min.css">
-	<link rel="stylesheet" href="css/feature.css">
-</head>
-<body>
-	<nav class="navbar navbar-inverse" role="navigation">
-		<div class="container-fluid">
-	    	<!-- <img src="image/logoa.png" style="float:left"/> -->
-	    	<a class="navbar-brand" href="#" style="color: #fff;margin:5px 10px;font-size:25px;">流量仿真系统</a>
-	    	<ul class="nav navbar-nav navbar-right">
-		        <li><a href="main.html">返回主页</a></li>
-		        <li class="dropdown">
-		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">设置 <span class="caret"></span></a>
-		          <ul class="dropdown-menu" role="menu">
-		            <li><a href="#">个人设置</a></li>
-		            <li><a href="#">登出</a></li>
-		          </ul>
-		        </li>
-      		</ul>
-  		</div><!-- /.container-fluid -->
-	</nav>
-	<div class="container">
-		<div class="timePick">
-			<div class="panel panel-primary">
-			  <!-- Default panel contents -->
-			  <div class="panel-heading"> <span class="caret"></span>真实流量源</div>
-			  <div class="panel-content">
-					<table class="table">
-					    <thead>
-					    	<tr>
-					    	<th>编号</th><th>仿真流量名称</th><th>真实流量名称</th><th>开始时间</th><th>结束时间</th><th>操作</th>
-					    	</tr>
-					    </thead>
-					    <tbody>
-<tr><td>1</td><td>北京电信</td><td>北京电信流量</td><td>2014-03-03</td><td>2015-05-05</td><td><button class="btn btn-info">查询</button><button class="btn btn-danger" data-toggle='modal' data-target="#deleModal" >删除</button></td><input type="hidden" id="sequence" value="1"></tr>
-				        </tbody>
-					</table>
-			  </div>
-			</div>
-	
-		
-		</div>  
-	
-	</div><!-- end of container -->
-	<div class="modal fade" id="deleModal">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-	        <h4 class="modal-title">确定删除此流量吗？</h4>
-	      </div>
-	      <div class="modal-body">
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">取消</button>
-	        <button type="button" class="btn btn-danger" id='dele_confirm'>确认</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
-</body>
-</html>
+<div class="timePick">
+	<div class="panel panel-primary">
+	  <!-- Default panel contents -->
+	  <div class="panel-heading"> <span class="caret"></span>真实流量源</div>
+	  <div class="panel-content">
+			<table class="table">
+			    <thead>
+			    	<tr>
+			    	<th>编号</th><th>仿真流量名称</th><th>真实流量名称</th><th>开始时间</th><th>结束时间</th><th>操作</th>
+			    	</tr>
+			    </thead>
+			    <tbody>
+<tr><td>1</td><td>北京电信</td><td>北京电信流量</td><td>2014-03-03</td><td>2015-05-05</td><td><a class="btn btn-info" href="#/main">查询</a><button class="btn btn-danger" data-toggle='modal' data-target="#deleModal" >删除</button></td><input type="hidden" id="sequence" value="1"></tr>
+		        </tbody>
+			</table>
+	  </div>
+	</div>
+</div>  
+<div class="modal fade" id="deleModal">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">确定删除此流量吗？</h4>
+      </div>
+      <div class="modal-body">
+        <button type="button" class="btn btn-primary" data-dismiss="modal" style="margin-left:55px;">取消</button>
+        <button type="button" class="btn btn-danger" id='dele_confirm' style="margin-left:25px;">确认</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div>
