@@ -308,7 +308,6 @@ app.get('/search', function(req, res,next){
 });*/
 
 
-
 app.get('/excel', function(req, res,next){
   var conf ={};
   var confrowdata=new Array();

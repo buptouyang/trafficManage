@@ -1,5 +1,6 @@
 (function() {
-  var login=angular.module('login',[]);  
+  var login=angular.module('login',[]);
+  var baseUrl = 'http://localhost:3000/content.html';  
   function testValid(type,$scope){
     switch(type){
       case "uid":{
@@ -31,10 +32,11 @@
     $scope.user.nameValid=false;
     $scope.user.pswValid=false;
     $scope.user.rem=false;
-    angular.element(":text").bind('blur',function(ev){
+    $("#uid").bind('blur',function(ev){
+      alert(1)
       $scope.$apply(testValid(ev.target.id,$scope));
     });
-    angular.element(":password").bind('blur',function(ev){
+    angular.element("#psw")[0].bind('blur',function(ev){
       $scope.$apply(testValid(ev.target.id,$scope));
     });
     
@@ -43,22 +45,19 @@
       testValid("uid",$scope);
       testValid("psw",$scope);
       if($scope.user.pswValid && $scope.user.nameValid){
-        $http.post('login.php',{
-         'uid':$scope.user.userName,'psw':$scope.user.passWord,'rem':$scope.user.rem
+        $http.post('/login',{
+         'uid':md5($scope.user.userName),'psw':md5($scope.user.passWord),'rem':$scope.user.rem
         }).success(function(data) {
-          
-          console.log(data);
-          if(data.msg=="success"){
-            $window.location.href='main.html';
-          }else if(data.msg=="fail"){
-            if(data.reason=="001"){
+          if(data.status==0){
+            $window.location.href='#/trafficManage';
+          }else if(data.status==2){
               $scope.user.pswErr=true;
               $scope.user.pswErrMsg="密码错误";
               $scope.user.nameErr=false;
-            }else if(data.reason=="002"){
-              $scope.user.nameErr=true;
-              $scope.user.nameErrMsg="用户名不存在";
-              $scope.user.pswErr=false;            }
+          }else if(data.status==1){
+            $scope.user.nameErr=true;
+            $scope.user.nameErrMsg="用户名不存在";
+            $scope.user.pswErr=false;           
           }
         });
       }

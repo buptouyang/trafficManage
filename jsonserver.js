@@ -9,8 +9,34 @@ var config = require('./config');
 var port = 3000;  
 var data = {'name': 'jifeng', 'company': 'taobao'};  
 app.use(express.static(path.join(__dirname,'public')));
+app.use(express.bodyParser());
 app.get('/',function(req,res,next){
  
+});
+app.post('/login', function(req, res,next){
+  var queryExpression="select * from user where user='"+req.body.uid+"'";
+  db.query(queryExpression,function(err,results){
+      if(err) return next(err);
+        if(!results[0]){
+          var message={'status':1,'massage':"用户名不存在"};
+          var str =  JSON.stringify(message);
+          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+          res.end(str);
+        } else { 
+          if(results[0].psw == req.body.psw){
+            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+            var message={'status':0,'massage':"登录成功"};
+            var str =  JSON.stringify(message); 
+            res.end(str);
+          } else {
+            var message={'status':2,'massage':"密码错误"};
+            var str =  JSON.stringify(message); 
+            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+            res.end(str);
+          }
+        }
+  });
+
 });
 //http://localhost:3000/search?type=1&start=201411181212&end=201411181213&callback=a    //10.108.24.18
 app.get('/feature', function(req, res,next){
