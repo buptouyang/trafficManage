@@ -1,4 +1,4 @@
-<div class="timePick">
+<div class="trafficDesc">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
 	  <div class="panel-heading"> <span class="caret"></span>真实流量源</div>
@@ -10,7 +10,7 @@
 			    	</tr>
 			    </thead>
 			    <tbody>
-<tr><td>1</td><td>北京电信</td><td>北京电信流量</td><td>2014-03-03</td><td>2015-05-05</td><td><button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button><a class="btn btn-info" href="#/realTraffic">查询</a></td><input type="hidden" id="sequence" value="1"></tr>
+<tr ng-repeat="data in infos"><td>{{$index+1}}</td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td><td><!-- <button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button> --><a class="btn btn-info" href="#/realTraffic" ng-click='searchClick($event)'>查看</a></td><input type="hidden" id="sequence" value="{{data.id}}"></tr>
 		        </tbody>
 			</table>
 	  </div>

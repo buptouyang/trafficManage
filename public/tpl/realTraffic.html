@@ -1,75 +1,123 @@
 <div class="timePick">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading"> <span class="caret"></span>   流量</div>
+	  <div class="panel-heading"> <span class="caret"></span>流量信息 <span>{{trafficName}}</span><span> {{mstartTime}} </span><span>~{{mendTime}}</span><input type="hidden" value={{mid}} id="mid"></div>
 	  <div class="panel-content">
 	  	<div class="searchHelp">
-	  		<label for="">开始时间</label>
-	 		<!-- <select name="start" id="start"></select> -->
-	 		<select name="startYear" id="startYear"><option value="2006">2006</option><option value="2014">2014</option></select>年
-	 		<select name="startMonth" id="startMonth"><option value="11">11</option><option value="12">12</option></select>月
-	 		<select name="startDay" id="startDay">
-
-	 		</select>日
-	 		<select name="startHour" id="startHour">
-
-	 		</select>时
-	 		<select name="startMin" id="startMin">
-
-	 		</select>分
-	 		<select name="startSec" id="startSec">
-
-	 		</select>秒 <!-- </br> -->
-		 			 	
-		 	<label for="">结束时间</label>
-		 		<select name="endYear" id="endYear"><option value="2006">2006</option><option value="2014">2014</option></select>年
-		 		<select name="endMonth" id="endMonth"><option value="11">11</option><option value="12">12</option></select>月
-		 		<select name="endDay" id="endDay">
-		 			<option value="28">28</option>
-		 			<option value="29">29</option>
-		 			<option value="30">30</option>
-		 		</select>日
-		 		<select name="endHour" id="endHour">
-		 			<option value="08">8</option>
-		 			<option value="09">9</option>
-		 			<option value="10">10</option>
-		 		</select>时
-		 		<select name="endMin" id="endMin">
-
-		 		</select>分
-		 		<select name="endSec" id="endSec">
-
-		 		</select>秒
-		 	<label for="">时间比例尺度</label>
-		 	<select name="timeScale" id="timeScale">
-	 			<option value="28">5</option>
-	 			<option value="29">10</option>
-	 			<option value="30">15</option>
+	  		<div class="form-group">
+	  			<label for="" class="Searchlabel">类型</label>
+			 	<select name="searchType" id="searchType">
+			 		<option value="1">流量大小</option>
+		 			<option value="2">包大小</option>
+		 			<option value="3">五元组</option>
+		 			<option value="4">分片</option>
+		 			<option value="5">包长分布</option>
+		 		</select>
+	  			<label for="" class="Searchlabel">开始时间</label>
+	  			<input size="13" type="text" readonly class="form_datetime" id="startTime" datepicker ng-model="dateStart" date-error="errMessage"><span style="font-weight:bold">:</span>
+		 		<input type="number"  min="0" max="59" id="startSec">秒 <!-- </br> -->
+			 			 	
+			 	<label for="" class="Searchlabel">结束时间</label>
+			 		<input size="13" type="text" readonly class="form_datetime" id="endTime" datepicker ng-model="dateEnd" date-error="errMessage"><span style="font-weight:bold">:</span>
+		 		<input type="number"  min="0" max="59" id="endSec">秒 <!-- </br> -->
+		 		<label for="" class="Searchlabel">端口</label>
+			 	<select name="port" id="portId">
+			 		<option value="">所有</option>
+		 			<option value="0">0</option>
+		 			<option value="1">1</option>
+		 		</select>
+		 		<label for="" class="Searchlabel">网络协议</label>
+			 	<select name="net_pro" id="netPro">
+			 		<option value="">所有</option>
+		 			<option value="4">IPV4</option>
+		 			<option value="6">IPV6</option>
+		 		</select>
+		 		<label for="" class="Searchlabel">传输层协议</label>
+			 	<select name="trans_pro" id="transPro">
+			 		<option value="">所有</option>
+			 		<option value="6">TCP</option>
+		 			<option value="17">UDP</option>
+		 			<option value="99">其他</option>
+		 		</select>
+		 		<button id="searchNum" class="btn btn-info">查询</button>
+	  		</div>
+	  		<label for="" class="Searchlabel">视图：</label>
+		 	<label for="" class="Searchlabel">时间比例尺度</label>
+		 	<select name="timeScale" id="timeScale" ng-disabled='typeDis'>
+		 		<option value="1">1</option>
+	 			<option value="5">5</option>
+	 			<option value="10">10</option>
+	 			<option value="15">15</option>
+	 			<option value="20">20</option>
 	 		</select>
 		 	
-		 	<button id="packageNum" class="btn btn-info">查询</button>
-		 	<span id="export" class="btn btn-success">导出</span>
+	 		<input type="checkbox" id="totalUp" ng-disabled='typeDis'>
+	 		<label for="">累积流量</label>	
+		 	
+		 	<span id="exportExcel" class="btn btn-success">导出</span>
 	  	</div>
-	  		
-		 	<label for="">对比流量</label><button class="btn btn-warning btn-sm" id="addTraffic">添加</button><button class="btn btn-danger btn-sm" id="deleTraffic">删除</button>
+		 	<label for="" >对比流量</label><button class="btn btn-warning btn-sm Searchlabel" data-toggle='modal' data-target='#addModal' ng-disabled="compDis">添加</button><button class="btn btn-danger btn-sm Searchlabel" id="deleTraffic" data-toggle='modal' data-target='#deleModal' ng-disabled="compDis">删除</button>
 		 	<table class="table seqList">
 			    <thead>
 			    	<tr>
-			    	<th>编号</th><th>对比流量名称</th><th>起止时间</th>
+			    	<th>编号</th><th>对比流量名称</th><th>对比流量描述称</th><th>开始时间</th><th>结束时间</th>
 			    	</tr>
 			    </thead>
 			    <tbody>
-			    	<tr><td><input type="checkbox" name="deleList"></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr>
-			    	<tr><td><input type="checkbox" name="deleList"></td></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr>
-<!-- <tr><td>序列1(点击后出树图，不能修改)</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr>
-<tr><td>序列1</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr> -->
+			    	<tr ng-repeat = 'data in comCkListdata'><td><input type="checkbox" name="comList" id="{{data.id}}"></td><td>{{data.name}}</td><td>{{data.desc}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
+			    	
 		        </tbody>
 			</table>
 	  </div>
 	</div>
 
-
+<!-- <tr><td><input type="checkbox" name="deleList"></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr>
+			    	<tr><td><input type="checkbox" name="deleList"></td></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr> -->
+<!-- <tr><td>序列1(点击后出树图，不能修改)</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr>
+<tr><td>序列1</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr> -->
 </div>  <!-- end of sidenav -->
 <div class="right_content" id="featureChart">
 	
 </div>
+<div class="modal fade" id="deleModal">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">确定删除此流量吗？</h4>
+      </div>
+      <div class="modal-body">
+        <button type="button" class="btn btn-primary" data-dismiss="modal" style="margin-left:55px;">取消</button>
+        <button type="button" class="btn btn-danger" id='dele_confirm' style="margin-left:25px;">确认</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+ </div><!-- /.end -->
+
+
+<div class="modal fade" id="addModal">
+<div class="modal-dialog">
+  <div class="modal-content"> 
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+      <h4 class="modal-title">对比流量</h4>
+    </div>
+    <div class="modal-body">	
+      <table class="table">
+	    <thead>
+	    	<tr>
+	    	<th>编号</th><th>对比流量名称</th><th>描述</th><th>开始时间</th><th>结束时间</th>
+	    	</tr>
+	    </thead>
+	    <tbody>
+			<tr ng-repeat="data in comInfos"><td><input id="{{data.id}}" name="comCheck" type='checkbox'></td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
+        </tbody>
+	</table>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" data-dismiss="modal" style="margin-left:55px;">取消</button>
+      <button type="button" class="btn btn-danger" id='chooseConfirm' style="margin-left:25px;">选择</button>
+    </div>
+  </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+ </div>

@@ -1,6 +1,6 @@
 (function() {
   var login=angular.module('login',[]);
-  var baseUrl = 'http://localhost:3000/content.html';  
+  var baseUrl = '10.108.27.225:3000/content.html';  
   function testValid(type,$scope){
     switch(type){
       case "uid":{
@@ -32,13 +32,12 @@
     $scope.user.nameValid=false;
     $scope.user.pswValid=false;
     $scope.user.rem=false;
-    $("#uid").bind('blur',function(ev){
-      alert(1)
+    /*$("#uid").bind('blur',function(ev){
       $scope.$apply(testValid(ev.target.id,$scope));
     });
     angular.element("#psw")[0].bind('blur',function(ev){
       $scope.$apply(testValid(ev.target.id,$scope));
-    });
+    });*/
     
     
     $scope.submit = function() {
@@ -49,7 +48,7 @@
          'uid':md5($scope.user.userName),'psw':md5($scope.user.passWord),'rem':$scope.user.rem
         }).success(function(data) {
           if(data.status==0){
-            $window.location.href='#/trafficManage';
+            $window.location.href=baseUrl+'#/trafficManage';
           }else if(data.status==2){
               $scope.user.pswErr=true;
               $scope.user.pswErrMsg="密码错误";

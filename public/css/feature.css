@@ -37,4 +37,11 @@ nav.navbar-inverse{
 .searchHelp{
 	padding-bottom: 5px;
 	border-bottom: 1px solid #428bca;
+	margin-bottom: 5px;
+}
+.Searchlabel{
+	margin-left:5px;
+}
+.form-group{
+	margin:2px 0;
 }

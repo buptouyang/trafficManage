@@ -1,7 +1,7 @@
 {
-	"host":"10.108.25.177",
+	"host":"localhost",
 	"database":"traffic",
 	"port":"3306",
 	"user":"root",
-	"password":"123456"
+	"password":"123456789"
 }
