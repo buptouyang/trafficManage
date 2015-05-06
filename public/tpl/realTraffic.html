@@ -8,7 +8,7 @@
 	  			<label for="" class="Searchlabel">类型</label>
 			 	<select name="searchType" id="searchType">
 			 		<option value="1">流量大小</option>
-		 			<option value="2">包大小</option>
+		 			<option value="2">包数</option>
 		 			<option value="3">五元组</option>
 		 			<option value="4">分片</option>
 		 			<option value="5">包长分布</option>
@@ -29,32 +29,33 @@
 		 		<label for="" class="Searchlabel">网络协议</label>
 			 	<select name="net_pro" id="netPro">
 			 		<option value="">所有</option>
-		 			<option value="4">IPV4</option>
-		 			<option value="6">IPV6</option>
+		 			<option value="0">IPV4</option>
+		 			<option value="1">IPV6</option>
 		 		</select>
 		 		<label for="" class="Searchlabel">传输层协议</label>
 			 	<select name="trans_pro" id="transPro">
 			 		<option value="">所有</option>
-			 		<option value="6">TCP</option>
-		 			<option value="17">UDP</option>
-		 			<option value="99">其他</option>
+			 		<option value="0">TCP</option>
+		 			<option value="1">UDP</option>
+		 			<option value="2">其他</option>
 		 		</select>
 		 		<button id="searchNum" class="btn btn-info">查询</button>
 	  		</div>
 	  		<label for="" class="Searchlabel">视图：</label>
 		 	<label for="" class="Searchlabel">时间比例尺度</label>
-		 	<select name="timeScale" id="timeScale" ng-disabled='typeDis'>
-		 		<option value="1">1</option>
-	 			<option value="5">5</option>
-	 			<option value="10">10</option>
-	 			<option value="15">15</option>
-	 			<option value="20">20</option>
-	 		</select>
+		 	<input type="radio" name='view' id="monView" value='1' ng-disabled='typeDis'>
+	 		<label for="">月</label>
+	 		<input type="radio" name='view' id="dayView" value='2' ng-disabled='typeDis'>
+	 		<label for="">天</label>
+	 		<input type="radio" name='view' id="secView" value='3' checked ng-disabled='typeDis'>
+	 		<label for="">秒</label>
+		 	<input type="number"  min="1" id="viewSec">秒
 		 	
 	 		<input type="checkbox" id="totalUp" ng-disabled='typeDis'>
 	 		<label for="">累积流量</label>	
 		 	
 		 	<span id="exportExcel" class="btn btn-success">导出</span>
+		 	<button id="watch" class="btn btn-warning" ng-disabled='typeDis'>实时监控</button>
 	  	</div>
 		 	<label for="" >对比流量</label><button class="btn btn-warning btn-sm Searchlabel" data-toggle='modal' data-target='#addModal' ng-disabled="compDis">添加</button><button class="btn btn-danger btn-sm Searchlabel" id="deleTraffic" data-toggle='modal' data-target='#deleModal' ng-disabled="compDis">删除</button>
 		 	<table class="table seqList">

@@ -41,13 +41,21 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		trafficInfo.mstartTime = parentEle.siblings()[3].innerText;
 		trafficInfo.mendTime = parentEle.siblings()[4].innerText;
 		trafficInfo.mid = parentEle.siblings()[5].value;
+		$.cookie('trafficName', trafficInfo.trafficName, { expires: 7 }); // 存储一个带7天期限的 cookie
+		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
+		$.cookie('mendTime', trafficInfo.mendTime, { expires: 7 });
+		$.cookie('mid', trafficInfo.mid, { expires: 7 }); 
+		console.log($.cookie())
 	}
 	$.ajax({
-		url:'/realTraffic',
+		url:'/trafficInfo',
 		type:'GET',
 		dataType:'json',
 		success:function(data){
 			if(data.status==0 && data.dataList){
+				$.each(data.dataList,function(index,item){
+					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+				});
 				$scope.$apply(function(){
 					$scope.infos = data.dataList;
 				});
@@ -58,7 +66,15 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 
 routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	var myChart = echarts.init(document.getElementById('featureChart'));
+	var watch = 0;
 	$scope.compDis = true;
+	//if($.cookie('trafficName'))
+	$.cookie('trafficName') && ($scope.trafficName = $.cookie('trafficName'));
+	$.cookie('mstartTime') && ($scope.mstartTime = $.cookie('mstartTime'));
+	$.cookie('mendTime') && ($scope.mendTime = $.cookie('mendTime'));
+	$.cookie('mid') && ($scope.mid = $.cookie('mid'));
+	console.log($scope.trafficName);
+	
 	//$scope.radius = 180;
 	var option_pie;
 	var option_line = 
@@ -95,10 +111,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	        series : []
 	    };
 	
-    function initOption(option,title,legend,x,series,name){
+    function initOption(option,title,legend,x,series){
     	if(!option){
     		return;
     	}
+    	option.series=[];
     	title?option.title.text = title:'';
     	legend?option.legend.data=legend:'';
     	x?option.xAxis[0].data = x:'';	
@@ -120,31 +137,107 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			}
 		}		
     }
-    $scope.trafficName = trafficInfo.trafficName;
+/*    $scope.trafficName = trafficInfo.trafficName;
     $scope.mstartTime = trafficInfo.mstartTime;
     $scope.mendTime = trafficInfo.mendTime;
-    $scope.mid = trafficInfo.mid;
+    $scope.mid = trafficInfo.mid;*/
+    $('#watch').click(function(e){
+    	rt();
+    	watch = setInterval(rt,5000);
+    	function rt(){
+    		type = $('#searchType').val();
+	    	var port = $("#portId").val();
+	    	var transPro = $('#transPro').val();
+	    	var netPro = $("#netPro").val();
+	    	var tId = $("#mid").val();
+
+			$.ajax({
+	    		url:'/realTime',
+	    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,tId:tId},
+	    		type:'post',
+	    		dataType:'json',
+	    		success:function(data){
+	    			if(data.status == 0 && data.dataList){
+	    				data.dataList = data.dataList.reverse();
+	    				var lengendData = [];
+						var valueData = [];	
+						var timeData = [];
+						var lineSeries = {
+				            name:'',
+				            type:'line',
+				            data:[]
+				        }
+				        var option_real = 
+							{
+						        title : {
+						            text: ''
+						        },
+						        tooltip : {
+						            trigger: 'item'
+						        },
+						        legend: {
+						            data:[]
+						        },
+						        toolbox: {
+						            show : false
+						        },
+						        calculable : true,
+						        xAxis : [
+						            {
+						                type : 'category',
+						                name:"时间",                       
+						                data:['']
+						            }
+						        ],
+						        yAxis : [
+						            {
+						                type : 'value',
+						                axisLabel : {
+						                    formatter: '{value}'
+						                },
+						                splitArea : {show : true}
+						            }
+						        ],
+						        series : []
+						    };
+						$scope.compDis = false;
+						$scope.$apply();
+						var formalTime = UTCDay($scope.mstartTime);
+						lineSeries.name = $scope.trafficName;
+						$.each(data.dataList,function(index,item){
+					  		valueData.push(item.sumData);
+							timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
+						});
+						lineSeries.data = valueData;
+						initOption(option_real,legendText[type],[$scope.trafficName],timeData,lineSeries);
+						myChart?myChart.clear():'';
+						myChart.setOption(option_real);			 
+	    			}
+	    		}
+	    	});
+    	}
+    });
     function search(callback){ //1查询 0导出
     	type = $('#searchType').val();
-    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val())/1000:0;
-    	var startSec = ($("#startSec").val()?parseInt($("#startSec").val(),10):0) && ($("#startSec").val()>59?59:parseInt($("#startSec").val(),10));
+    	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
+    	var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
-    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())/1000:0;
-    	var endSec = ($("#endSec").val()?parseInt($("#endSec").val(),10):0) && ($("#endSec").val()>59?59:parseInt($("#endSec").val(),10));
+    	var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
+    	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
     	var timeScale = $('#timeScale').val();
     	var port = $("#portId").val();
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
-    	if(startTime>endTime){
+    	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTimep;
     		endTime=tem;
     	}
 
 		$.ajax({
-    		url:'/trafficInfo',
+    		url:'/trafficDetail',
     		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId},
     		type:'post',
     		dataType:'json',
@@ -158,11 +251,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     }//end of search
     $("#exportExcel").click(function(e){
     	var ctype = $('#searchType').val();
-    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val())/1000:0;
-    	var startSec = ($("#startSec").val()?parseInt($("#startSec").val(),10):0) && ($("#startSec").val()>59?59:parseInt($("#startSec").val(),10));
+    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val())-UTCDay($scope.mstartTime):0;
+    	var startSec =  $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
-    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())/1000:0;
-    	var endSec = ($("#endSec").val()?parseInt($("#endSec").val(),10):0) && ($("#endSec").val()>59?59:parseInt($("#endSec").val(),10));
+    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())-UTCDay($scope.mstartTime):0;
+    	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
     	var timeScale = $('#timeScale').val();
     	var port = $("#portId").val();
@@ -196,7 +289,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
     	$scope.radius = 180;
 		var pieSeries = {
-            name:'1s内包总数',
+            name:'包总数',
             type:'pie',
             radius:[0,$scope.radius],
             itemStyle:{
@@ -216,6 +309,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             type:'line',
             data:[]
         }
+        if(watch){
+        	clearInterval(watch);
+        }
         search(function(data,type){
 			var lengendData = [];
 			var valueData = [];	
@@ -234,19 +330,19 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						}			
 					}			
 				});	
-				initOption(option_pie,'',lengendData,'',pieSeries,'');
+				initOption(option_pie,'',lengendData,'',pieSeries);
 				console.log(option_pie);
 				myChart?myChart.clear():'';
 				myChart.setOption(option_pie);
 			}else{
+				var formalTime = UTCDay($scope.mstartTime);
 				lineSeries.name = $scope.trafficName;
 				$.each(data.dataList,function(index,item){
 			  		valueData.push(item.sumData);
-					timeData.push(item.time);			
+					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
 				});
 				lineSeries.data = valueData;
 				initOption(option_line,legendText[type],[$scope.trafficName],timeData,lineSeries);
-				console.log(JSON.stringify(option_line));
 				myChart?myChart.clear():'';
 				myChart.setOption(option_line);
 			}
@@ -323,7 +419,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 							$scope.radius += 50;
 							var series = 
 								{
-									name:'1s内包总数',
+									name:'包总数',
 									type:'pie',
 									data:[],
 									radius:[outRadius,outRadius+30],
@@ -419,6 +515,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		$.each(value,function(index,item){
 			time.push('');
 		});
+		myChart.clear();
 		myChart.setOption({
 	        title : {
 	            text: legendText[type]
@@ -451,7 +548,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	        ],
 	        series : [{
 	        	data:value,
-	        	name:'aa',
+	        	name:'累计流量',
 	        	type:'line'
 	        }]
 	    });
@@ -559,11 +656,14 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	})
     $('#addModal').on('show.bs.modal', function (event) {
 	  $.ajax({
-		url:'/realTraffic',
+		url:'/trafficInfo',
 		type:'GET',
 		dataType:'json',
 		success:function(data){
 			if(data.status==0 && data.dataList){
+				$.each(data.dataList,function(index,item){
+					item.end = NormalDate(UTCDay(item.start)+parseInt(start,10));
+				});
 				$scope.$apply(function(){
 					$scope.comInfos = data.dataList;
 				});
@@ -573,12 +673,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	});
 });
 	
-function NormalDate(utc){
-    var date = new Date(utc);
-    var ndt;
-    ndt = date.getUTCFullYear()+"/"+(date.getUTCMonth()+1)+"/"+date.getUTCDate()+" "+(date.getUTCHours()+8)+":"+date.getUTCMinutes()+":"+date.getUTCSeconds();
-    return ndt;
-}
+
 	
 
 routeApp.controller('emulateCtl',function($scope,$http){
@@ -591,7 +686,7 @@ routeApp.directive('datepicker', function() {
         error:'=dateError'
     },
     link:function(scope, element, attrs) {
-      console.log(scope.err)
+      //console.log(scope.err)
 
       var utcStartTime,utcEndTime,err;
       element.datetimepicker({
@@ -625,6 +720,12 @@ routeApp.directive('datepicker', function() {
 });
 function UTCDay(daystring) {
 	var dayobj=new Date(daystring);
-	return dayobj.getTime();
+	return dayobj.getTime()/1000;
 	// return Date.UTC(dayobj.getFullYear(), dayobj.getMonth(), dayobj.getDate(), dayobj.getHours()-8, dayobj.getMinutes(), dayobj.getSeconds(), 0);
+}
+function NormalDate(utc){
+    var date = new Date(utc*1000);
+    var ndt;
+    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours())+":"+date.getMinutes()+":"+date.getSeconds();
+    return ndt;
 }

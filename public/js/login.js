@@ -1,6 +1,6 @@
 (function() {
   var login=angular.module('login',[]);
-  var baseUrl = '10.108.27.225:3000/content.html';  
+  //var baseUrl = 'http://localhost:3000/content.html';  
   function testValid(type,$scope){
     switch(type){
       case "uid":{
@@ -47,8 +47,10 @@
         $http.post('/login',{
          'uid':md5($scope.user.userName),'psw':md5($scope.user.passWord),'rem':$scope.user.rem
         }).success(function(data) {
+          alert(data.message);
           if(data.status==0){
-            $window.location.href=baseUrl+'#/trafficManage';
+            //$window.location.href=baseUrl+'#/trafficManage';
+            $window.location.href='content.html#/trafficManage';
           }else if(data.status==2){
               $scope.user.pswErr=true;
               $scope.user.pswErrMsg="密码错误";

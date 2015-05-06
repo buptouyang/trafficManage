@@ -7,30 +7,35 @@ var path = require('path');
 var mysql = require('mysql');
 var config = require('./config');
 var port = 3000;  
-var data = {'name': 'jifeng', 'company': 'taobao'};  
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.bodyParser());
 app.get('/',function(req,res,next){
  res.send('hello')
 });
+function NormalDate(utc){
+    var date = new Date(utc*1000);
+    var ndt;
+    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours())+":"+date.getMinutes()+":"+date.getSeconds();
+    return ndt;
+}
 app.post('/login', function(req, res,next){
   console.log(req.body);
   var queryExpression="select * from user where user='"+req.body.uid+"'";
   db.query(queryExpression,function(err,results){
       if(err) return next(err);
         if(!results[0]){
-          var message={'status':1,'massage':"用户名不存在"};
+          var message={'status':1,'message':"用户名不存在"};
           var str =  JSON.stringify(message);
           res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
           res.end(str);
         } else { 
           if(results[0].psw == req.body.psw){
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            var message={'status':0,'massage':"登录成功"};
+            var message={'status':0,'message':"登录成功"};
             var str =  JSON.stringify(message); 
             res.end(str);
           } else {
-            var message={'status':2,'massage':"密码错误"};
+            var message={'status':2,'message':"密码错误"};
             var str =  JSON.stringify(message); 
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
@@ -38,7 +43,7 @@ app.post('/login', function(req, res,next){
         }
   });
 });
-app.post('/trafficInfo', function(req, res,next){
+app.post('/trafficDetail', function(req, res,next){
   console.log(req.body);
   var queryExpression = 'select';
   var queryObj = req.body;
@@ -50,7 +55,7 @@ app.post('/trafficInfo', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1280_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",from_unixtime(c_time,'%Y-%m-%d %h:%i:%s') as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
+  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
@@ -64,7 +69,7 @@ app.post('/trafficInfo', function(req, res,next){
     console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果 
-            var message={'status':1,'massage':"无查询结果"};
+            var message={'status':1,'message':"无查询结果"};
             var str =  JSON.stringify(message);
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
@@ -88,9 +93,9 @@ app.get('/exceldata', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1280_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",from_unixtime(c_time,'%Y-%m-%d %h:%i:%s') as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
-  queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start,10):'';
-  queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end,10):'';
+  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
+  queryObj.start!='0'?(queryExpression+=" and t_start >="+queryObj.start,10):'';
+  queryObj.end!='0'?(queryExpression+=" and t_end <="+queryObj.end,10):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
   queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
@@ -102,113 +107,162 @@ app.get('/exceldata', function(req, res,next){
     console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果 
-            var message={'status':1,'massage':"无查询结果"};
+            var message={'status':1,'message':"无查询结果"};
             var str =  JSON.stringify(message);
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
         } else {  //有结果
-            var conf ={};
-            var confrowdata=new Array();           
-            if(type == '5'){
-              var rowdata =new Array();
-              rowdata.push(queryObj.startTime);
-              rowdata.push(queryObj.endTime);
-              for(value in results[0]){
-                if(value != 'time'){
-                  rowdata.push(results[0][value]); 
-                }              
-              }
-              confrowdata.push(rowdata);
-              conf.rows = confrowdata;
-              conf.cols = [{
-                caption:'开始时间',   
-                type:'string',
-                width:60
-              },{
-                  caption:'结束时间',
+            db.query('select t_start,t_end from TRAFFIC_INFO where t_id='+queryObj.tId,function(err,timeResults){
+              var formalTime = timeResults[0].t_start;
+              var tendTime = formalTime+timeResults[0].t_end;
+              var conf ={};
+              var confrowdata=new Array();           
+              if(type == '5'){
+                var rowdata =new Array();
+                if(queryObj.start!=0){
+                  console.log(queryObj.start)
+                  rowdata.push(queryObj.start);
+                }else{
+                  console.log(NormalDate(formalTime))
+                  rowdata.push(NormalDate(formalTime));
+                }
+                if(queryObj.end!=0){
+                  rowdata.push(queryObj.end);
+                }else{
+                  console.log(NormalDate(tendTime))
+                  rowdata.push(NormalDate(tendTime));
+                }
+                for(value in results[0]){
+                  if(value != 'time'){
+                    rowdata.push(results[0][value]); 
+                  }              
+                }
+                confrowdata.push(rowdata);
+                conf.rows = confrowdata;
+                conf.cols = [{
+                  caption:'开始时间',   
                   type:'string',
                   width:60
-              },
-              {
-                  caption:'40字节~80字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'81~160字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'161字节~320字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'321字节~640字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'641字节~1280字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'1281字节~1500字节',  
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'1501字节以上',  
-                  type:'number',
-                  width:20
-              }];
-            }else{
-              results.forEach(function(item, index){
-              var rowdata =new Array(); 
-              console.log(item)           
-                rowdata.push(item.time);
-                rowdata.push(item.sumData);
-                confrowdata.push(rowdata);
-              }); 
-              console.log
-              conf.rows = confrowdata;
-              conf.cols = [{
-                caption:'时刻',   
-                type:'string',
-                width:60
-                },/*{
+                },{
                     caption:'结束时间',
                     type:'string',
                     width:60
-                },*//*{
-                    caption:'步长',
+                },
+                {
+                    caption:'40字节~80字节',  
                     type:'number',
                     width:20
-                },*/
+                },
                 {
-                    caption:'数据',  
+                    caption:'81~160字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'161字节~320字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'321字节~640字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'641字节~1280字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'1281字节~1500字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'1501字节以上',  
                     type:'number',
                     width:20
                 }];
-            }
+              }else{
+                results.forEach(function(item, index){
+                var rowdata =new Array();    
+                  rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
+                  rowdata.push(item.sumData);
+                  confrowdata.push(rowdata);
+                }); 
+                conf.rows = confrowdata;
+                conf.cols = [{
+                  caption:'时刻',   
+                  type:'string',
+                  width:60
+                  },/*{
+                      caption:'结束时间',
+                      type:'string',
+                      width:60
+                  },*//*{
+                      caption:'步长',
+                      type:'number',
+                      width:20
+                  },*/
+                  {
+                      caption:'数据',  
+                      type:'number',
+                      width:20
+                  }];
+              }
+              
+              var result = nodeExcel.execute(conf);
+              res.setHeader('Content-Type', 'application/vnd.openxmlformats');
+              res.setHeader('charset', 'utf-8');
+              res.setHeader("Content-Disposition", "attachment; filename="+"trafficdistribution.xlsx");
+              res.end(result, 'binary');
+            });
             
-            var result = nodeExcel.execute(conf);
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-            res.setHeader('charset', 'utf-8');
-            res.setHeader("Content-Disposition", "attachment; filename="+"trafficdistribution.xlsx");
-            res.end(result, 'binary');
           }//end of excel
     });   
 });
-app.get('/realTraffic', function(req, res,next){
-  var queryExpression="select t_id as id,t_name as name,t_desc as descript,from_unixtime(t_start,'%Y-%m-%d %h:%i:%s') as start,from_unixtime(t_end,'%Y-%m-%d %h:%i:%s') as end from TRAFFIC_INFO";
+app.get('/trafficInfo', function(req, res,next){
+  var queryExpression="select t_id as id,t_name as name,t_desc as descript,from_unixtime(t_start,'%Y-%m-%d %h:%i:%s') as start,t_end as end from TRAFFIC_INFO";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果
-            var message={'status':1,'massage':"无查询结果"};
+            var message={'status':1,'message':"无查询结果"};
+            var str =  JSON.stringify(message);
+            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+            res.end(str);         
+        } else {  //有结果
+            var data={'status':0,dataList:[]};
+            data.dataList=results;
+            var str =  JSON.stringify(data); 
+            res.end(str);
+        }
+  });
+});
+//实时流量
+app.post('/realTime', function(req, res,next){
+  var queryExpression = 'select';
+  var type = parseInt(req.body.ctype,10);
+  var queryObj = req.body;
+  console.log(queryObj);
+  switch(type){
+    case 1:queryExpression +=" sum(traffic_size) as sumData";break;
+    case 2:queryExpression +=" sum(pkt_num) as sumData";break;
+    case 3:queryExpression +=" sum(tuple_num) as sumData";break;
+    case 4:queryExpression +=" sum(frag_num) as sumData";break;
+  }
+  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;
+  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
+  queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
+  queryExpression +=" group by c_time";
+  queryExpression += ' order by c_time DESC limit 0,3000';
+  console.log(queryExpression);
+  db.query(queryExpression,function(err,results){
+    console.log(results);
+      if(err) return next(err);
+        if(!results[0]){ //无查询结果
+            var message={'status':1,'message':"无查询结果"};
             var str =  JSON.stringify(message);
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);         
@@ -238,7 +292,7 @@ app.post('/trafficAll', function(req, res,next){
   db.query(queryExpression,function(err,results){
       if(err) return next(err);
         if(!results[0]){ //无查询结果
-          var message={'status':1,'massage':"无查询结果"};
+          var message={'status':1,'message':"无查询结果"};
           var str =  JSON.stringify(message);
           res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
           res.end(str);
@@ -364,7 +418,7 @@ app.get('/search', function(req, res,next){
   
 });*/
 
-app.get('/excel', function(req, res,next){
+/*app.get('/excel', function(req, res,next){
   var conf ={};
   var confrowdata=new Array();
   var ptype = req.query.ptype;
@@ -596,7 +650,7 @@ app.get('/excel', function(req, res,next){
 
     }//end of default
   }
-});
+});*/
  
 //链接数据库
 var db = mysql.createClient(config);
