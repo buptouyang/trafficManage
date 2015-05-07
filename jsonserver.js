@@ -66,7 +66,7 @@ app.post('/trafficDetail', function(req, res,next){
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    console.log(results);
+    console.log(results.length);
       if(err) return next(err);
         if(!results[0]){ //无查询结果 
             var message={'status':1,'message':"无查询结果"};
@@ -75,7 +75,18 @@ app.post('/trafficDetail', function(req, res,next){
             res.end(str);
         } else {  //有结果
             var data={'status':0,dataList:[]};
-            data.dataList=results;
+            var tempValue=0;
+            if(queryObj.total == 'true'){
+              results.forEach(function(item,index) {
+                var totalvalue = {};
+                tempValue+=parseInt(item.sumData,10);
+                totalvalue.time = item.time;
+                totalvalue.sumData = tempValue
+                data.dataList.push(totalvalue);
+              });
+            }else{
+              data.dataList=results;
+            }            
             var str =  JSON.stringify(data); 
             res.end(str);
         }
@@ -104,7 +115,7 @@ app.get('/exceldata', function(req, res,next){
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    console.log(results);
+    //console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果 
             var message={'status':1,'message':"无查询结果"};
@@ -184,8 +195,20 @@ app.get('/exceldata', function(req, res,next){
                     width:20
                 }];
               }else{
+                if(queryObj.total == 'true'){
+                  var tempValue = 0;
+                  results.forEach(function(item,index) {
+                    var totalvalue = {};
+                    tempValue+=parseInt(item.sumData,10);
+                    totalvalue.time = item.time;
+                    totalvalue.sumData = tempValue
+                    results[index]=totalvalue;
+                  });
+                }else{
+                  //data.dataList=results;
+                } 
                 results.forEach(function(item, index){
-                var rowdata =new Array();    
+                  var rowdata =new Array();    
                   rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
                   rowdata.push(item.sumData);
                   confrowdata.push(rowdata);

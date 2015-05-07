@@ -217,7 +217,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    	});
     	}
     });
-    function search(callback){ //1查询 0导出
+    function search(callback){ 
     	type = $('#searchType').val();
     	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
     	var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
@@ -230,6 +230,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
+    	var totalBoolean = $('#totalUp').prop('checked');
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTimep;
@@ -238,7 +239,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 
 		$.ajax({
     		url:'/trafficDetail',
-    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId},
+    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId,total:totalBoolean},
     		type:'post',
     		dataType:'json',
     		success:function(data){
@@ -262,7 +263,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
-    	window.location.href="/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId;
+    	var totalBoolean = $('#totalUp').prop('checked');
+    	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean);
 	});
     $('#searchNum').click(function(){
     	var type;
@@ -561,7 +563,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
 		$scope.$apply();
 	});
-	$("#totalUp").change(function(e){
+/*	$("#totalUp").change(function(e){
 		var sdata = JSON.parse(localStorage.getItem('searchData'));
 		var type = $("#searchType").val();
 		if($(e.target).prop('checked')){
@@ -653,7 +655,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		        }]
 		    });
 		}
-	})
+	});*/
     $('#addModal').on('show.bs.modal', function (event) {
 	  $.ajax({
 		url:'/trafficInfo',
@@ -726,6 +728,6 @@ function UTCDay(daystring) {
 function NormalDate(utc){
     var date = new Date(utc*1000);
     var ndt;
-    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours())+":"+date.getMinutes()+":"+date.getSeconds();
+    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours()+8)+":"+date.getMinutes()+":"+date.getSeconds();
     return ndt;
 }
