@@ -45,3 +45,10 @@ nav.navbar-inverse{
 .form-group{
 	margin:2px 0;
 }
+.machineForm{
+	margin:0 60px;
+}
+.machineForm .form-group label{
+	width:;
+	text-align: right;
+}

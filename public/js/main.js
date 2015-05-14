@@ -14,6 +14,10 @@ routeApp.config(['$routeProvider',function($routeProvider){
 		templateUrl:'tpl/realTraffic.html',
 		controller:'realCtl'
 	})
+	.when('/machineManage',{
+		templateUrl:'tpl/machineManage.html',
+		controller:'machineCtl'
+	})
 	/*.when('/feature/:type',{
 		templateUrl:'tpl/featureChart.html',
 		controller:'featureChartCtl'
@@ -675,7 +679,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	});
 });
 	
+routeApp.controller('machineCtl',function($scope,$http){
 
+});
 	
 
 routeApp.controller('emulateCtl',function($scope,$http){
