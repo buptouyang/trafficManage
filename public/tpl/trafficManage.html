@@ -1,7 +1,7 @@
 <div class="trafficDesc">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading"> <span class="caret"></span>真实流量源</div>
+	  <div class="panel-heading"> <span class="caret"></span>真实流量源<button class="btn btn-warning" data-toggle='modal' data-target="#newModal">新建</button></div>
 	  <div class="panel-content">
 			<table class="table">
 			    <thead>
@@ -10,29 +10,38 @@
 			    	</tr>
 			    </thead>
 			    <tbody>
-<tr ng-repeat="data in infos"><td>{{$index+1}}</td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td><td><!-- <button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button> --><a class="btn btn-info" href="#/realTraffic" ng-click='searchClick($event)'>查看</a></td><input type="hidden" id="sequence" value="{{data.id}}"></tr>
+<tr ng-repeat="data in infos"><td>{{$index+1}}</td><td>{{data.name}}</td><td>{{data.machine}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td><td><!-- <button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button> --><a class="btn btn-info" href="#/realTraffic" ng-click='searchClick($event)'>查看</a></td><input type="hidden" id="sequence" value="{{data.id}}"></tr>
 		        </tbody>
 			</table>
 	  </div>
 	</div>		
 </div>  
 
-<div class="modal fade" id="emulateModal" tabindex="-1" role="dialog">
+<div class="modal fade" id="newModal" tabindex="-1" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title">仿真流量</h4>
+        <h4 class="modal-title">新建任务</h4>
       </div>
       <div class="modal-body">
           <div class="form-group">
-            <label class="control-label">名称:</label>
-            <input type="text" class="form-control" id="newSubseqName">
-          </div>	          
+            <label class="control-label">方式:</label>
+            <input type="radio" name="machineType" checked="checked" value="1">捕获报文
+            <input type="radio" name="machineType" value="2">产生报文
+          </div>	
+          <div class="form-group">
+            <label class="control-label">机器:</label>
+            <select name="" id="machineList">
+              <option  ng-repeat="data in machines" value="{{data.id}}">
+                {{data.name}}
+              </option>
+            </select>
+          </div>          
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>
-        <button type="button" class="btn btn-primary" id="newSubseq">新建</button>
+        <button type="button" class="btn btn-primary" id="newTask">新建</button>
       </div>
     </div>
   </div>

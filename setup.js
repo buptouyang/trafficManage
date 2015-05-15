@@ -3,7 +3,7 @@ var config = require('./config');
 delete config.database;
 var db = mysql.createClient(config);
 /*db.query("CREATE DATABASE traffic");*/
-db.query("USE traffic");
+db.query("USE traffic_real");
 /*db.query('DROP TABLE IF EXISTS packetdistribution');
 db.query('CREATE TABLE packetdistribution('+
 	'time VARCHAR(25),'+
@@ -18,12 +18,20 @@ db.query('CREATE TABLE packetdistribution('+
 	'size_1025 LONG,'+
 	'size_1500 LONG,'+
 	'PRIMARY KEY (time))'	);*/
-db.query('DROP TABLE IF EXISTS user');
+/*db.query('DROP TABLE IF EXISTS user');
 db.query('CREATE TABLE user('+
 	'id bigint unsigned NOT NULL AUTO_INCREMENT,'+
 	'user VARCHAR(256) NOT NULL,'+
 	'psw VARCHAR(256) NOT NULL,'+
-	'PRIMARY KEY (id))'	);
+	'PRIMARY KEY (id))'	);*/
+db.query('DROP TABLE IF EXISTS machine_info');
+db.query('CREATE TABLE machine_info('+
+	'm_id int(11) NOT NULL AUTO_INCREMENT,'+
+	'm_name varchar(32) NOT NULL UNIQUE,'+
+	'm_capture_flag smallint(6),'+
+	'm_generate_flag smallint(6),'+
+	'm_valid_flag smallint(6),'+
+	'PRIMARY KEY (m_id))'	);
 
 db.end(function(){
 	process.exit();

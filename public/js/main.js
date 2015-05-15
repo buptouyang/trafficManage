@@ -66,6 +66,54 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			}
 		}
 	});	
+	$("#newTask").click(function(e){
+		var type = 	$("input[name='machineType']").val();
+		var machine = $("#newName").val();
+		var start;
+		var end;
+		$.ajax({
+			url:'/newTask',
+			type:'POST',
+			data:{type:type,machine:machine,start:start,end:end},
+			dataType:'json',
+			success:function(data){
+				if(data.status==0){
+					$('#editModal').modal('hide');
+					location.reload();
+				}
+			}
+		});
+	});
+
+	$("body").delegate("input[name='machineType']","change",function(e){	
+		var type = 	$("input[name='machineType']").val();
+		$.ajax({
+			url:'/machineFunc',
+			type:'POST',
+			data:{type:type},
+			dataType:'json',
+			success:function(data){
+				if(data.status==0 && data.dataList){
+					$scope.machines = data.dataList;
+				}
+			}
+		});
+	});
+
+	$('#newModal').on('show.bs.modal', function (event) {
+	  $.ajax({
+		url:'/machineAll',
+		type:'POST',
+		dataType:'json',
+		success:function(data){
+			if(data.status==0 && data.dataList){
+				$scope.$apply(function(){
+					$scope.machines = data.dataList;
+				});
+			}
+		}
+	  });	
+	});
 });
 
 routeApp.controller('realCtl',function($scope,$http,trafficInfo){
@@ -680,7 +728,37 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 });
 	
 routeApp.controller('machineCtl',function($scope,$http){
-
+	$.ajax({
+		url:'/machineAll',
+		type:'POST',
+		dataType:'json',
+		success:function(data){
+			if(data.status==0 && data.dataList){
+				$scope.$apply(function(){
+					$scope.machines = data.dataList;
+				});
+			}
+		}
+	});
+	$("body").delegate("#newMachine","click",function(e){
+		var type = 	$("input[name='machineType']").val();
+		var name = $.trim($("#newName").val());
+		var capture = $("input[name='cap']:checked").val();
+		var geragte = $("input[name='gene']:checked").val();
+		var valid = $("input[name='valid']:checked").val();
+		$.ajax({
+			url:'/newMachine',
+			type:'POST',
+			data:{type:type,machine:machine,capture:capture,generagte:geragte,valid:valid},
+			dataType:'json',
+			success:function(data){
+				if(data.status==0){
+					$('#editModal').modal('hide');
+				}
+			}
+		});
+	});
+	
 });
 	
 

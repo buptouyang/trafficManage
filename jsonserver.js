@@ -245,7 +245,7 @@ app.get('/exceldata', function(req, res,next){
     });   
 });
 app.get('/trafficInfo', function(req, res,next){
-  var queryExpression="select t_id as id,t_name as name,t_desc as descript,from_unixtime(t_start,'%Y-%m-%d %h:%i:%s') as start,t_end as end from TRAFFIC_INFO";
+  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y-%m-%d %h:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
@@ -326,6 +326,32 @@ app.post('/trafficAll', function(req, res,next){
             res.end(str);
         }
   });
+});
+app.post('/machineAll', function(req, res,next){
+  var queryExpression = 'select m_id as id,m_name as name,m_capture_flag as cap,m_generate_flag as gene,m_valid_flag as valid from machine_info';
+  db.query(queryExpression,function(err,results){
+      if(err) return next(err);
+        if(!results[0]){ //无查询结果
+          var message={'status':1,'message':"无查询结果"};
+          var str =  JSON.stringify(message);
+          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+          res.end(str);
+        } else {  //有结果
+            var validArray = ['不启用','启用'];
+            var capArray = ['不能捕获','捕获'];
+            var geneArray = ['不能生成','生成'];            
+            results.forEach(function(item, index){ 
+              item.valid = validArray[item.valid];
+              item.cap = capArray[item.cap];
+              item.gene = geneArray[item.gene];
+            });
+            console.log(results);
+            var data={'status':0,dataList:[]};
+            data.dataList=results;
+            var str =  JSON.stringify(data); 
+            res.end(str);
+        }
+  }); 
 });
 //http://localhost:3000/search?type=1&start=201411181212&end=201411181213&callback=a    //10.108.24.18
 /*app.get('/feature', function(req, res,next){
