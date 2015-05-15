@@ -741,7 +741,6 @@ routeApp.controller('machineCtl',function($scope,$http){
 		}
 	});
 	$("body").delegate("#newMachine","click",function(e){
-		var type = 	$("input[name='machineType']").val();
 		var name = $.trim($("#newName").val());
 		var capture = $("input[name='cap']:checked").val();
 		var geragte = $("input[name='gene']:checked").val();
@@ -749,7 +748,7 @@ routeApp.controller('machineCtl',function($scope,$http){
 		$.ajax({
 			url:'/newMachine',
 			type:'POST',
-			data:{type:type,machine:machine,capture:capture,generagte:geragte,valid:valid},
+			data:{machine:name,capture:capture,generagte:geragte,valid:valid},
 			dataType:'json',
 			success:function(data){
 				if(data.status==0){
