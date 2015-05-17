@@ -39,21 +39,21 @@
 		 			<option value="1">UDP</option>
 		 			<option value="2">其他</option>
 		 		</select>
-		 		<button id="searchNum" class="btn btn-info">查询</button>
+		 		
 	  		</div>
 	  		<label for="" class="Searchlabel">视图：</label>
 		 	<label for="" class="Searchlabel">时间比例尺度</label>
-		 	<input type="radio" name='view' id="monView" value='1' ng-disabled='typeDis'>
-	 		<label for="">月</label>
-	 		<input type="radio" name='view' id="dayView" value='2' ng-disabled='typeDis'>
-	 		<label for="">天</label>
-	 		<input type="radio" name='view' id="secView" value='3' checked ng-disabled='typeDis'>
-	 		<label for="">秒</label>
-		 	<input type="number"  min="1" id="viewSec">秒
+		 	<!-- <input type="radio" name='view' id="monView" value='1' ng-disabled='typeDis'>
+		 		 		<label for="">月</label>
+		 		 		<input type="radio" name='view' id="dayView" value='2' ng-disabled='typeDis'>
+		 		 		<label for="">天</label>
+		 		 		<input type="radio" name='view' id="secView" value='3' checked ng-disabled='typeDis'>
+		 		 		<label for="">秒</label> -->
+		 	<input type="number"  min="1" ng-disabled="scaleDis" id="timeScale">秒
 		 	
-	 		<input type="checkbox" id="totalUp" ng-disabled='typeDis'>
+	 		<input type="checkbox" id="totalUp" name="total" ng-disabled='typeDis'>
 	 		<label for="">累积流量</label>	
-		 	
+		 	<button id="searchNum" class="btn btn-info">查询</button>
 		 	<span id="exportExcel" class="btn btn-success">导出</span>
 		 	<button id="watch" class="btn btn-warning" ng-disabled='typeDis'>实时监控</button>
 	  	</div>

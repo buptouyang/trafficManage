@@ -18,6 +18,10 @@ function NormalDate(utc){
     ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours())+":"+date.getMinutes()+":"+date.getSeconds();
     return ndt;
 }
+function UTCDay(daystring) {
+  var dayobj=new Date(daystring);
+  return Date.parse(dayobj)/1000;
+}
 app.post('/login', function(req, res,next){
   console.log(req.body);
   var queryExpression="select * from user where user='"+req.body.uid+"'";
@@ -48,12 +52,13 @@ app.post('/trafficDetail', function(req, res,next){
   var queryExpression = 'select';
   var queryObj = req.body;
   var type = queryObj.ctype;
+  var scale = queryObj.scale >= 1 ? queryObj.scale:1;
   switch(type){
     case '1':queryExpression +=" sum(traffic_size) as sumData";break;
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
     case '3':queryExpression +=" sum(tuple_num) as sumData";break;
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
-    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1280_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
   queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
@@ -76,6 +81,27 @@ app.post('/trafficDetail', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:[]};
             var tempValue=0;
+            console.log(results);            
+           /* results.forEach(function(item,index) {
+              if(index%scale){
+                num++;
+                total += parseInt(results[index].sumData,10);
+                if(index==results.length-1){
+                  value[i].sumData=total/num;
+                  value[i].time = item.time;
+                }
+              }else{
+
+                if(i>=0){ 
+                  value[i].sumData=total/num;
+                  value[i].time = item.time;
+                }
+                total = parseInt(item.sumData,10);
+                 
+                i++;
+                num=1;
+              }
+            });*/
             if(queryObj.total == 'true'){
               results.forEach(function(item,index) {
                 var totalvalue = {};
@@ -85,7 +111,36 @@ app.post('/trafficDetail', function(req, res,next){
                 data.dataList.push(totalvalue);
               });
             }else{
-              data.dataList=results;
+              if(scale != 1){
+                var value = new Array();
+                var i=-1;
+                var num = 1;
+                var total = 0;
+                results.forEach(function(item,index) {
+                  if(index%scale){
+                    num++;
+                    total += parseInt(item.sumData,10);
+                    if(index==results.length-1){
+                      value[i]={};
+                      value[i].sumData=total/num;
+                      value[i].time = item.time;
+                    }
+                  }else{
+                    if(i>=0){ 
+                      value[i]={};
+                      value[i].sumData=total/num;
+                      value[i].time = results[index-1].time;
+                    }
+                    total = parseInt(item.sumData,10);                
+                    i++;
+                    num=1;
+                  }
+                });
+                data.dataList = value;
+                console.log(value)
+              }else{
+                data.dataList=results;
+              }             
             }            
             var str =  JSON.stringify(data); 
             res.end(str);
@@ -245,7 +300,7 @@ app.get('/exceldata', function(req, res,next){
     });   
 });
 app.get('/trafficInfo', function(req, res,next){
-  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y-%m-%d %h:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id";
+  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y-%m-%d %h:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
@@ -327,30 +382,112 @@ app.post('/trafficAll', function(req, res,next){
         }
   });
 });
+//查询机器
+app.post('/machineFunc', function(req, res,next){
+  var queryExpression = 'select m_id as id,m_name as name from machine_info where ';
+  if(req.body.type == '1'){
+    queryExpression += 'm_capture_flag=1';
+  }else{
+    queryExpression += 'm_generate_flag=1';
+  }
+  queryExpression+=' and m_valid_flag=1';
+  console.log(queryExpression)
+  db.query(queryExpression,function(err,results){
+    console.log(results)
+    if(err) return next(err);
+    if(!results[0]){ //无查询结果
+      var message={'status':1,'message':"无查询结果"};
+      var str =  JSON.stringify(message);
+      res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+      res.end(str);
+    } else {  //有结果
+        var data={'status':0,dataList:[]};
+        data.dataList=results;
+        var str =  JSON.stringify(data); 
+        res.end(str);
+    }
+  })
+});
+//新建机器
+app.post('/newMachine', function(req, res,next){
+  var queryObj = req.body;
+  var queryExpression = 'insert into machine_info(m_name,m_capture_flag,m_generate_flag,m_valid_flag) values("'+queryObj.machine+'",'+queryObj.capture;
+  queryExpression+=','+queryObj.generate+','+queryObj.valid+')';
+  console.log(queryExpression)
+  db.query(queryExpression,function(err,results){
+    if(err){
+      console.log('插入记录出错:'+err.message);
+      return next(err);
+    } else {
+      var data={'status':0,dataList:[]};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }
+  });
+});
+//新建任务
+app.post('/newTask', function(req, res,next){
+  var queryObj = req.body;
+  queryObj.start = parseInt(queryObj.start,10);
+  queryObj.end = parseInt(queryObj.end,10);
+  var start,end;
+  if(queryObj.execType == '1'){ //立即执行
+    start = UTCDay(new Date());
+  }else{
+    if(queryObj.startTimeType == '1'){//绝对时间
+      start = queryObj.start;
+    }else{
+      start = UTCDay(new Date())/1000 + queryObj.start;
+    }   
+  }
+  if(queryObj.endTimeType == '1'){//绝对时间
+    if(queryObj.end < start){
+      end = start - queryObj.end;
+      start = queryObj.end;
+    }else{
+      end = queryObj.end - start;
+    }    
+  }else{ //相对时间
+    end = queryObj.end;
+  }
+  var queryExpression = 'insert into traffic_info(m_id,t_start,t_end,t_run_flag) values('+queryObj.machine+','+start+',';
+  queryExpression+=end+',0)';
+  console.log(queryExpression);
+  db.query(queryExpression,function(err,results){
+    if(err){
+      console.log('插入记录出错:'+err.message);
+      return next(err);
+    } else{
+      var data={'status':0,dataList:[]};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }  
+  })
+});
 app.post('/machineAll', function(req, res,next){
-  var queryExpression = 'select m_id as id,m_name as name,m_capture_flag as cap,m_generate_flag as gene,m_valid_flag as valid from machine_info';
+  var queryExpression = 'select m_id as id,m_name as name,m_capture_flag as cap,m_generate_flag as gene,m_valid_flag as valid from machine_info order by m_id DESC';
   db.query(queryExpression,function(err,results){
       if(err) return next(err);
-        if(!results[0]){ //无查询结果
-          var message={'status':1,'message':"无查询结果"};
-          var str =  JSON.stringify(message);
-          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+      if(!results[0]){ //无查询结果
+        var message={'status':1,'message':"无查询结果"};
+        var str =  JSON.stringify(message);
+        res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+        res.end(str);
+      } else {  //有结果
+          var validArray = ['不启用','启用'];
+          var capArray = ['不能捕获','捕获'];
+          var geneArray = ['不能生成','生成'];            
+          results.forEach(function(item, index){ 
+            item.valid = validArray[item.valid];
+            item.cap = capArray[item.cap];
+            item.gene = geneArray[item.gene];
+          });
+          console.log(results);
+          var data={'status':0,dataList:[]};
+          data.dataList=results;
+          var str =  JSON.stringify(data); 
           res.end(str);
-        } else {  //有结果
-            var validArray = ['不启用','启用'];
-            var capArray = ['不能捕获','捕获'];
-            var geneArray = ['不能生成','生成'];            
-            results.forEach(function(item, index){ 
-              item.valid = validArray[item.valid];
-              item.cap = capArray[item.cap];
-              item.gene = geneArray[item.gene];
-            });
-            console.log(results);
-            var data={'status':0,dataList:[]};
-            data.dataList=results;
-            var str =  JSON.stringify(data); 
-            res.end(str);
-        }
+      }
   }); 
 });
 //http://localhost:3000/search?type=1&start=201411181212&end=201411181213&callback=a    //10.108.24.18

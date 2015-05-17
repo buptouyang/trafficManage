@@ -39,12 +39,13 @@ routeApp.factory('trafficInfo',function(){
 	return {};
 });
 routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
+	$scope.taskInfo = {};
 	$scope.searchClick=function(e){
 		var parentEle = $(e.target).parent();
 		trafficInfo.trafficName = parentEle.siblings()[1].innerText;
-		trafficInfo.mstartTime = parentEle.siblings()[3].innerText;
-		trafficInfo.mendTime = parentEle.siblings()[4].innerText;
-		trafficInfo.mid = parentEle.siblings()[5].value;
+		trafficInfo.mstartTime = parentEle.siblings()[4].innerText;
+		trafficInfo.mendTime = parentEle.siblings()[5].innerText;
+		trafficInfo.mid = parentEle.siblings()[6].value;
 		$.cookie('trafficName', trafficInfo.trafficName, { expires: 7 }); // 存储一个带7天期限的 cookie
 		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
 		$.cookie('mendTime', trafficInfo.mendTime, { expires: 7 });
@@ -68,25 +69,51 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	});	
 	$("#newTask").click(function(e){
 		var type = 	$("input[name='machineType']").val();
-		var machine = $("#newName").val();
-		var start;
-		var end;
-		$.ajax({
-			url:'/newTask',
-			type:'POST',
-			data:{type:type,machine:machine,start:start,end:end},
-			dataType:'json',
-			success:function(data){
-				if(data.status==0){
-					$('#editModal').modal('hide');
-					location.reload();
-				}
+		$scope.taskInfo.machine = $("#machineList").val();
+		//开始时间
+		if($scope.taskInfo.execType == '1'){ //立即执行
+			$scope.taskInfo.start = 0;
+		}else{
+			var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
+			if($scope.taskInfo.startTimeType == '1'){
+				var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0; 	
+		    	$scope.taskInfo.start = startHour+startSec;
+			}else{
+				$scope.taskInfo.start = startSec;
 			}
-		});
+		}
+		//结束时间
+		var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;
+		if($scope.taskInfo.endTimeType == '1'){
+			var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0; 	
+	    	$scope.taskInfo.end = endHour+endSec;
+		}else{
+			$scope.taskInfo.end = endSec;
+		}
+		if($scope.taskInfo.start < $scope.taskInfo.end){
+			$.ajax({
+				url:'/newTask',
+				type:'POST',
+				data:$scope.taskInfo,
+				dataType:'json',
+				success:function(data){
+					if(data.status==0){
+						$('#editModal').modal('hide');
+						location.reload();
+					}
+				}
+			});
+		}else{
+			$("#newModal .modal-body").append('<div class="form-group"><div class="col-sm-offset-2"><p class="text-danger">结束时间早于开始时间，请重新选择</p></div></div>');
+		}
+		
 	});
 
-	$("body").delegate("input[name='machineType']","change",function(e){	
-		var type = 	$("input[name='machineType']").val();
+	$("body").delegate("[name='machineType']:checked","change",function(e){	
+		var type = 	$("input[name='machineType']:checked").val();
+		$scope.taskInfo.type = type;
+		e.stopPropagation();
+		debugger
 		$.ajax({
 			url:'/machineFunc',
 			type:'POST',
@@ -95,15 +122,18 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			success:function(data){
 				if(data.status==0 && data.dataList){
 					$scope.machines = data.dataList;
+					$scope.$apply();
 				}
 			}
 		});
 	});
 
 	$('#newModal').on('show.bs.modal', function (event) {
-	  $.ajax({
-		url:'/machineAll',
+		$("#newModal input[type='radio']").trigger('change');
+	 /* $.ajax({
+		url:'/machineFunc',
 		type:'POST',
+		data:{type:1},
 		dataType:'json',
 		success:function(data){
 			if(data.status==0 && data.dataList){
@@ -112,11 +142,42 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				});
 			}
 		}
-	  });	
+	  });*/	
 	});
-});
+
+	$("body").delegate("input[name='execType']","change",function(e){	
+		var type = 	$("input[name='execType']:checked").val();
+		$scope.taskInfo.execType = type;
+		if(type == '2'){
+			$(".start").css("display","block");
+		}else{
+			$(".start").css("display","none");
+		}
+	});
+
+	$("body").delegate("input[name='startCountType']","change",function(e){	
+		var type = 	$("input[name='startCountType']:checked").val();
+		$scope.taskInfo.startTimeType = type;
+		if(type == '1'){
+			$(".startYearView").css("display","inline-block");
+		}else{
+			$(".startYearView").css("display","none");
+		}
+	});
+
+	$("body").delegate("input[name='endCountType']","change",function(e){	
+		var type = 	$("input[name='endCountType']:checked").val();
+		$scope.taskInfo.endTimeType = type;
+		if(type == '1'){
+			$(".endYearView").css("display","inline-block");
+		}else{
+			$(".endYearView").css("display","none");
+		}
+	});
+});//end 
 
 routeApp.controller('realCtl',function($scope,$http,trafficInfo){
+	 $(".container").attr('class', 'realGraph');
 	var myChart = echarts.init(document.getElementById('featureChart'));
 	var watch = 0;
 	$scope.compDis = true;
@@ -277,12 +338,17 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
-    	var timeScale = $('#timeScale').val();
+    	var timeScale;
     	var port = $("#portId").val();
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
     	var totalBoolean = $('#totalUp').prop('checked');
+    	if(totalBoolean == 'true'){
+    		timeScale = 1;
+    	}else{
+    		timeScale = $('#timeScale').val() || 1;
+    	}
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTimep;
@@ -291,7 +357,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 
 		$.ajax({
     		url:'/trafficDetail',
-    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId,total:totalBoolean},
+    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId,total:totalBoolean,scale:timeScale},
     		type:'post',
     		dataType:'json',
     		success:function(data){
@@ -310,7 +376,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())-UTCDay($scope.mstartTime):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
-    	var timeScale = $('#timeScale').val();
+    	var timeScale = $('#timeScale').val() || 1;
     	var port = $("#portId").val();
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
@@ -372,6 +438,36 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			var timeData = [];
 			$scope.compDis = false;
 			$scope.$apply();
+			//
+/*			var i=-1;
+			var num = 0;
+			var value = [];
+			var total = 0;
+			var scale = $('#timeScale').val() || 1;
+			var results = data.dataList;
+			results.forEach(function(item,index) {
+              if(index%scale){
+                num++;
+                total += parseInt(item.sumData,10);
+                if(index==results.length-1){
+                  value[i]={};
+                  value[i].sumData=total/num;
+                  value[i].time = item.time;
+                }
+              }else{
+
+                if(i>=0){ 
+                	value[i]={};
+                  value[i].sumData=total/num;
+                  value[i].time = results[index-1].time;
+                }
+                total = parseInt(item.sumData,10);                 
+                i++;
+                num=1;
+              }
+            });
+            console.log(value)*/
+            //
 			if(type == '5'){   	
 				$.each(data.dataList,function(index,item){
 			  		for(name in item){
@@ -541,7 +637,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		myChart.setOption(option_line);
 		$('#deleModal').modal('hide');
 	});
-	$("body").delegate("#timeScale","change",function(e){
+	/*$("body").delegate("#timeScale","change",function(e){
 		var ele = $(e.target);
 		var scale = ele.val();
 		var value = [];
@@ -606,12 +702,21 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	        	type:'line'
 	        }]
 	    });
-	});
+	});*/
 	$("#searchType").change(function(e){
 		if($(e.target).val() == '5'){
 			$scope.typeDis = true;
 		}else{
 			$scope.typeDis = false;
+		}
+		$scope.$apply();
+	});
+	$("#totalUp").change(function(e){
+    	var totalBoolean = $('#totalUp').prop('checked');
+		if(totalBoolean==true){
+			$scope.scaleDis = true;
+		}else{
+			$scope.scaleDis = false;
 		}
 		$scope.$apply();
 	});
@@ -743,16 +848,17 @@ routeApp.controller('machineCtl',function($scope,$http){
 	$("body").delegate("#newMachine","click",function(e){
 		var name = $.trim($("#newName").val());
 		var capture = $("input[name='cap']:checked").val();
-		var geragte = $("input[name='gene']:checked").val();
+		var generate = $("input[name='gene']:checked").val();
 		var valid = $("input[name='valid']:checked").val();
 		$.ajax({
 			url:'/newMachine',
 			type:'POST',
-			data:{machine:name,capture:capture,generagte:geragte,valid:valid},
+			data:{machine:name,capture:capture,generate:generate,valid:valid},
 			dataType:'json',
 			success:function(data){
 				if(data.status==0){
 					$('#editModal').modal('hide');
+					location.reload();
 				}
 			}
 		});

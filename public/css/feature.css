@@ -42,13 +42,17 @@ nav.navbar-inverse{
 .Searchlabel{
 	margin-left:5px;
 }
-.form-group{
+/* .form-group{
 	margin:2px 0;
-}
+} */
 .machineForm{
 	margin:0 60px;
 }
 .machineForm .form-group label{
 	width:;
 	text-align: right;
+}
+.realGraph{
+	width:1200px;
+	margin:auto;
 }

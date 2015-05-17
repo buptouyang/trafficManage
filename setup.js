@@ -3,7 +3,7 @@ var config = require('./config');
 delete config.database;
 var db = mysql.createClient(config);
 /*db.query("CREATE DATABASE traffic");*/
-db.query("USE traffic_real");
+db.query("USE traffic");
 /*db.query('DROP TABLE IF EXISTS packetdistribution');
 db.query('CREATE TABLE packetdistribution('+
 	'time VARCHAR(25),'+
