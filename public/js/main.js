@@ -1,5 +1,5 @@
 var routeApp = angular.module('mainContent',['ngRoute']);
-var legendText =['',"流量大小特征","包大小特征","五元组","分片","包长分布"];
+var legendText =['',"流量大小特征(单位:MB)","包数特征(单位:千个)","五元组","分片","包长分布(单位:百分百)"];
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
 	.when('/main',{
@@ -236,8 +236,10 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	                type : 'value',
 	                axisLabel : {
 	                    formatter: function(value){
-	                    	return Math.round(value/1024/1024)+'GB';
-	                    }
+	                    	return Math.round(value/1024);
+	                    	//Math.round(value)+'GB';
+	                    },
+	                    interval:1048576
 	                },
 	                splitArea : {show : true}
 	            }
@@ -458,7 +460,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
     	$scope.radius = 180;
 		var pieSeries = {
-            name:'包总数',
+            name:'',
             type:'pie',
             radius:[0,$scope.radius],
             itemStyle:{
@@ -527,6 +529,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						}			
 					}			
 				});	
+				pieSeries.name = $scope.trafficName;
 				initOption(option_pie,'',lengendData,'',pieSeries);
 				console.log(option_pie);
 				myChart?myChart.clear():'';
@@ -620,7 +623,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 							$scope.radius += 50;
 							var series = 
 								{
-									name:'包总数',
+									name:obj.name,
 									type:'pie',
 									data:[],
 									radius:[outRadius,outRadius+30],
@@ -661,29 +664,49 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	});
     $("body").delegate("#dele_confirm","click",function(e){
 		var checkEle = $("input[name='comList']:checked");
+		var type = $('#searchType').val();
 		$.each(checkEle,function(index,item){
 			var sibEle = $(item).parent().siblings();
 			var tid=item.id;
 			var tname = sibEle[0].innerText;
+			if(type == '5'){
+				$.each(option_pie.series,function(index,item){
+					if(tname == item.name){
+						option_pie.series.splice(index,1);
+					}
+				});	
+				$.each(option_pie.legend.data,function(index,item){
+					if(tname == item){
+						option_pie.legend.data.splice(index,1);
+					}
+				});	
+				var deleLen = checkEle.length;
+				$scope.radius -= 50*deleLen;
+				myChart.clear();
+				myChart.setOption(option_pie);
+			}else{
+				$.each(option_line.series,function(index,item){
+					if(tname == item.name){
+						option_line.series.splice(index,1);
+					}
+				});	
+				$.each(option_line.legend.data,function(index,item){
+					if(tname == item){
+						option_line.legend.data.splice(index,1);
+					}
+				});	
+				myChart.clear();
+				myChart.setOption(option_line);
+			}
 			$.each($scope.comCkListdata,function(index,data) {
 				if(tid == data.id){
 					$scope.comCkListdata.splice(index,1);
 				}
 			});	
-			$.each(option_line.series,function(index,item){
-				if(tname == item.name){
-					option_line.series.splice(index,1);
-				}
-			});	
-			$.each(option_line.legend.data,function(index,item){
-				if(tname == item){
-					option_line.legend.data.splice(index,1);
-				}
-			});	
+			
 		});	
 		$scope.$apply();
-		myChart.clear();
-		myChart.setOption(option_line);
+		
 		$('#deleModal').modal('hide');
 	});
 	/*$("body").delegate("#timeScale","change",function(e){
