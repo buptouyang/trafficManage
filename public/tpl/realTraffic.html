@@ -15,11 +15,11 @@
 		 		</select>
 	  			<label for="" class="Searchlabel">开始时间</label>
 	  			<input size="13" type="text" readonly class="form_datetime" id="startTime" datepicker ng-model="dateStart" date-error="errMessage"><span style="font-weight:bold">:</span>
-		 		<input type="number"  min="0" max="59" id="startSec">秒 <!-- </br> -->
+		 		<input type="number"  min="0" max="59" id="startSec" style="width:70px;">秒 <!-- </br> -->
 			 			 	
 			 	<label for="" class="Searchlabel">结束时间</label>
 			 		<input size="13" type="text" readonly class="form_datetime" id="endTime" datepicker ng-model="dateEnd" date-error="errMessage"><span style="font-weight:bold">:</span>
-		 		<input type="number"  min="0" max="59" id="endSec">秒 <!-- </br> -->
+		 		<input type="number"  min="0" max="59" id="endSec" style="width:70px;">秒 <!-- </br> -->
 		 		<label for="" class="Searchlabel">端口</label>
 			 	<select name="port" id="portId">
 			 		<option value="">所有</option>
@@ -31,6 +31,7 @@
 			 		<option value="">所有</option>
 		 			<option value="0">IPV4</option>
 		 			<option value="1">IPV6</option>
+		 			<option value="2">其他</option>
 		 		</select>
 		 		<label for="" class="Searchlabel">传输层协议</label>
 			 	<select name="trans_pro" id="transPro">

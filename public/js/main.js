@@ -216,7 +216,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	            {
 	                type : 'value',
 	                axisLabel : {
-	                    formatter: '{value}'
+	                    formatter: function(value){
+	                    	return Math.round(value/1024/1024)+'GB';
+	                    }
 	                },
 	                splitArea : {show : true}
 	            }
@@ -240,15 +242,35 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    		option.legend.data.push(item);
 	    	}); 
     	}
+    	var opLen,sLen;
+    	opLen=option.series[0].data.length;
+    	sLen=series.data.length
+    	if(sLen>opLen){
+    		//x坐标
+    		for(var i=0;i<sLen-opLen;i++){
+				option.xAxis[0].data.push('');
+			}
+			//数据
+			$.each(option.series,function(index,item){
+				for(var i=0;i<sLen-opLen;i++){
+					item.data.push(0);						
+				}	    		
+	    	}); 
+    	}else{
+    		for(var i=0;i<opLen-sLen;i++){
+				series.data.push('');
+			}   		
+    	}
 		option.series.push(series);
-		if(option.xAxis){
-			var len = option.xAxis[0].data.length;
-			if(x>len){
-				for(var i=0;i<len-x;i++){
+/*		if(option.xAxis){
+			var len;
+			len = option.xAxis[0].data.length;
+			if(x.length>len){
+				for(var i=0;i<x.length-len;i++){
 					option.xAxis[0].data.push('');
 				}
 			}
-		}		
+		}*/		
     }
 /*    $scope.trafficName = trafficInfo.trafficName;
     $scope.mstartTime = trafficInfo.mstartTime;
@@ -257,6 +279,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     $('#watch').click(function(e){
     	rt();
     	watch = setInterval(rt,5000);
+    	console.log(watch)
     	function rt(){
     		type = $('#searchType').val();
 	    	var port = $("#portId").val();
@@ -306,7 +329,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						            {
 						                type : 'value',
 						                axisLabel : {
-						                    formatter: '{value}'
+						                    formatter: function(value){
+						                    	return Math.round(value/1024/1024)+'GB';
+						                    }
 						                },
 						                splitArea : {show : true}
 						            }
@@ -351,7 +376,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	}
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
-    		startTime=endTimep;
+    		startTime=endTime;
     		endTime=tem;
     	}
 
@@ -385,6 +410,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean);
 	});
     $('#searchNum').click(function(){
+    	myChart?myChart.clear():'';
+    	if(watch){
+        	clearInterval(watch);
+        }
+        console.log(watch);
     	var type;
     	$scope.comCkListdata = null;
     	option_pie = {
@@ -429,9 +459,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             type:'line',
             data:[]
         }
-        if(watch){
-        	clearInterval(watch);
-        }
+        
         search(function(data,type){
 			var lengendData = [];
 			var valueData = [];	
@@ -543,6 +571,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	});*/
     });
     $("body").delegate("#chooseConfirm","click",function(e){
+    	e.stopPropagation();
+    	myChart?myChart.clear():'';
 		var checkEle = $("input[name='comCheck']:checked");
 		var checkData = [];
 		var type = $('#searchType').val();
@@ -706,8 +736,10 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	$("#searchType").change(function(e){
 		if($(e.target).val() == '5'){
 			$scope.typeDis = true;
+			$scope.scaleDis = true;
 		}else{
 			$scope.typeDis = false;
+			$scope.scaleDis = false;
 		}
 		$scope.$apply();
 	});
@@ -821,7 +853,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		success:function(data){
 			if(data.status==0 && data.dataList){
 				$.each(data.dataList,function(index,item){
-					item.end = NormalDate(UTCDay(item.start)+parseInt(start,10));
+					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
 				});
 				$scope.$apply(function(){
 					$scope.comInfos = data.dataList;
@@ -845,23 +877,71 @@ routeApp.controller('machineCtl',function($scope,$http){
 			}
 		}
 	});
-	$("body").delegate("#newMachine","click",function(e){
+	$("body").delegate(".edit","click",function(e){
+		var btn = e.target;
+		var id = $("#newName").attr('data');
 		var name = $.trim($("#newName").val());
 		var capture = $("input[name='cap']:checked").val();
 		var generate = $("input[name='gene']:checked").val();
 		var valid = $("input[name='valid']:checked").val();
-		$.ajax({
-			url:'/newMachine',
-			type:'POST',
-			data:{machine:name,capture:capture,generate:generate,valid:valid},
-			dataType:'json',
-			success:function(data){
-				if(data.status==0){
-					$('#editModal').modal('hide');
-					location.reload();
+		if(btn.id == 'newBtn'){
+			$.ajax({
+				url:'/newMachine',
+				type:'POST',
+				data:{machine:name,capture:capture,generate:generate,valid:valid},
+				dataType:'json',
+				success:function(data){
+					if(data.status==0){
+						$('#editModal').modal('hide');
+						location.reload();
+					}
 				}
-			}
-		});
+			});
+		}else if(btn.id == 'updateBtn'){
+			$.ajax({
+				url:'/updateMachine',
+				type:'POST',
+				data:{machine:name,capture:capture,generate:generate,valid:valid,id:id},
+				dataType:'json',
+				success:function(data){
+					if(data.status==0){
+						$('#editModal').modal('hide');
+						location.reload();
+					}
+				}
+			});
+		}
+		
+	});
+	$('#editModal').on('show.bs.modal', function (event) {
+		var modal = $(this);
+		var button = $(event.relatedTarget) // Button that triggered the modal
+		if($(button)[0].name=="editMachine"){
+			modal.find("#updateBtn").css('display','inline-block');
+			modal.find("#newBtn").css('display','none');
+			
+			var arr = new Array();
+			var valid = {"启用":0,"不启用":1};
+			var cap = {'捕获':0,"不能捕获":1};
+			var gene = {'生成':0,"不能生成":1};
+			var tdTem = button.parent().siblings();
+
+			// Extract info from data-* attributes
+			// If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+			// Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+			modal.find("#newName").attr('data',$(tdTem[5]).val());
+			modal.find('#newName').val($(tdTem[1]).text());
+			modal.find("input[name='cap']").eq(cap[$(tdTem[3]).text()]).prop("checked","checked");
+			modal.find("input[name='gene']").eq(gene[$(tdTem[4]).text()]).prop("checked","checked");
+			modal.find("input[name='valid']").eq(valid[$(tdTem[2]).text()]).prop("checked","checked");
+		}else if($(button)[0].name=="addMachine"){
+			modal.find("#updateBtn").css('display','none');
+			modal.find("#newBtn").css('display','inline-block');
+			modal.find('#newName').val('');
+			modal.find("input[name='cap']").eq(0).prop("checked","checked");
+			modal.find("input[name='gene']").eq(0).prop("checked","checked");
+			modal.find("input[name='valid']").eq(0).prop("checked","checked");			
+		}
 	});
 	
 });
@@ -917,6 +997,12 @@ function UTCDay(daystring) {
 function NormalDate(utc){
     var date = new Date(utc*1000);
     var ndt;
-    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours()+8)+":"+date.getMinutes()+":"+date.getSeconds();
+    function checkTime(i){
+	    if (i<10){
+	        i = "0" + i;
+	    }
+	    return i;
+	}
+    ndt = date.getFullYear()+"/"+checkTime(date.getMonth()+1)+"/"+checkTime(date.getDate())+" "+checkTime(date.getHours())+":"+checkTime(date.getMinutes())+":"+checkTime(date.getSeconds());
     return ndt;
 }

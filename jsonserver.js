@@ -157,7 +157,7 @@ app.get('/exceldata', function(req, res,next){
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
     case '3':queryExpression +=" sum(tuple_num) as sumData";break;
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
-    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1280_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
   queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and t_start >="+queryObj.start,10):'';
@@ -300,7 +300,7 @@ app.get('/exceldata', function(req, res,next){
     });   
 });
 app.get('/trafficInfo', function(req, res,next){
-  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y-%m-%d %h:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
+  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
@@ -334,7 +334,7 @@ app.post('/realTime', function(req, res,next){
   queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
   queryExpression +=" group by c_time";
-  queryExpression += ' order by c_time DESC limit 0,3000';
+  queryExpression += ' order by c_time DESC limit 0,1000';
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     console.log(results);
@@ -360,9 +360,9 @@ app.post('/trafficAll', function(req, res,next){
     case 2:queryExpression +=" sum(pkt_num) as sumData";break;
     case 3:queryExpression +=" sum(tuple_num) as sumData";break;
     case 4:queryExpression +=" sum(frag_num) as sumData";break;
-    case 5:queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1280_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case 5:queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",from_unixtime(c_time,'%Y-%m-%d %h:%i:%s') as time from CAPTURE_TRAFFIC where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
+  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
   if(type != 5){
     queryExpression +=" group by c_time";
   }
@@ -417,6 +417,22 @@ app.post('/newMachine', function(req, res,next){
   db.query(queryExpression,function(err,results){
     if(err){
       console.log('插入记录出错:'+err.message);
+      return next(err);
+    } else {
+      var data={'status':0,dataList:[]};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }
+  });
+});
+//修改机器
+app.post('/updateMachine', function(req, res,next){
+  var queryObj = req.body;
+  var queryExpression = 'update machine_info set m_name="'+queryObj.machine+'",m_capture_flag='+queryObj.capture+',m_generate_flag='+queryObj.generate+',m_valid_flag='+queryObj.valid+' where m_id='+queryObj.id;
+  console.log(queryExpression)
+  db.query(queryExpression,function(err,results){
+    if(err){
+      console.log('修改出错:'+err.message);
       return next(err);
     } else {
       var data={'status':0,dataList:[]};

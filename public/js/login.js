@@ -47,7 +47,7 @@
         $http.post('/login',{
          'uid':md5($scope.user.userName),'psw':md5($scope.user.passWord),'rem':$scope.user.rem
         }).success(function(data) {
-          alert(data.message);
+          //alert(data.message);
           if(data.status==0){
             //$window.location.href=baseUrl+'#/trafficManage';
             $window.location.href='content.html#/trafficManage';
