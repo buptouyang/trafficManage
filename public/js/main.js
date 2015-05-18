@@ -42,9 +42,9 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	$scope.taskInfo = {};
 	$scope.searchClick=function(e){
 		var parentEle = $(e.target).parent();
-		trafficInfo.trafficName = parentEle.siblings()[1].innerText;
-		trafficInfo.mstartTime = parentEle.siblings()[4].innerText;
-		trafficInfo.mendTime = parentEle.siblings()[5].innerText;
+		trafficInfo.trafficName = parentEle.siblings()[1].innerHTML;
+		trafficInfo.mstartTime = parentEle.siblings()[5].innerHTML;
+		trafficInfo.mendTime = parentEle.siblings()[6].innerHTML;
 		trafficInfo.mid = parentEle.siblings()[7].value;
 		$.cookie('trafficName', trafficInfo.trafficName, { expires: 7 }); // 存储一个带7天期限的 cookie
 		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
