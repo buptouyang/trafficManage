@@ -9,9 +9,9 @@ var config = require('./config');
 var port = 3000;  
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.bodyParser());
-app.get('/',function(req,res,next){
+/*app.get('/',function(req,res,next){
  res.send('hello')
-});
+});*/
 function NormalDate(utc){
     var date = new Date(utc*1000);
     var ndt;
@@ -81,7 +81,7 @@ app.post('/trafficDetail', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:[]};
             var tempValue=0;
-            console.log(results);            
+           // console.log(results);            
            /* results.forEach(function(item,index) {
               if(index%scale){
                 num++;
@@ -300,7 +300,7 @@ app.get('/exceldata', function(req, res,next){
     });   
 });
 app.get('/trafficInfo', function(req, res,next){
-  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
+  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
@@ -472,6 +472,25 @@ app.post('/newTask', function(req, res,next){
   db.query(queryExpression,function(err,results){
     if(err){
       console.log('插入记录出错:'+err.message);
+      return next(err);
+    } else{
+      var data={'status':0,dataList:[]};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }  
+  })
+});
+//结束任务
+app.post('/stopTask', function(req, res,next){
+  var id = req.body.id;
+  var queryExpression = 'update traffic_info set t_run_flag=2 where t_id='+id;
+  console.log(queryExpression);
+  db.query(queryExpression,function(err,results){
+    if(err){
+      console.log('任务结束出错:'+err.message);
+      var data={'status':1,message:'任务结束出错'};
+      var str =  JSON.stringify(data); 
+      res.end(str);
       return next(err);
     } else{
       var data={'status':0,dataList:[]};

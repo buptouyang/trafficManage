@@ -45,21 +45,40 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		trafficInfo.trafficName = parentEle.siblings()[1].innerText;
 		trafficInfo.mstartTime = parentEle.siblings()[4].innerText;
 		trafficInfo.mendTime = parentEle.siblings()[5].innerText;
-		trafficInfo.mid = parentEle.siblings()[6].value;
+		trafficInfo.mid = parentEle.siblings()[7].value;
 		$.cookie('trafficName', trafficInfo.trafficName, { expires: 7 }); // 存储一个带7天期限的 cookie
 		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
 		$.cookie('mendTime', trafficInfo.mendTime, { expires: 7 });
 		$.cookie('mid', trafficInfo.mid, { expires: 7 }); 
 		console.log($.cookie())
 	}
+	$scope.stopClick=function(e){
+		var parentEle = $(e.target).parent();
+		var id = parentEle.siblings()[7].value;
+		$.ajax({
+			url:'/stopTask',
+			type:'POST',
+			data:{id:id},
+			dataType:'json',
+			success:function(data){
+				if(data.status==1){
+					alert(data.message);
+				}else{
+					$(parentEle.siblings()[3]).text('结束运行');
+				}
+			}
+		});
+	}
 	$.ajax({
 		url:'/trafficInfo',
 		type:'GET',
 		dataType:'json',
 		success:function(data){
+			var statusArray = ['准备运行','正在运行','结束运行'];
 			if(data.status==0 && data.dataList){
 				$.each(data.dataList,function(index,item){
 					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+					item.status = statusArray[item.status];
 				});
 				$scope.$apply(function(){
 					$scope.infos = data.dataList;
@@ -416,7 +435,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
         }
         console.log(watch);
     	var type;
-    	$scope.comCkListdata = null;
+    	$scope.comCkListdata = [];
     	option_pie = {
 		    title : {
 		        text: '包长分布',
@@ -570,11 +589,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     		}
     	});*/
     });
+	$scope.comCkListdata = [];
     $("body").delegate("#chooseConfirm","click",function(e){
     	e.stopPropagation();
     	myChart?myChart.clear():'';
 		var checkEle = $("input[name='comCheck']:checked");
 		var checkData = [];
+
 		var type = $('#searchType').val();
 		$.each(checkEle,function(index,item){
 			var obj={};
@@ -584,7 +605,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			obj.desc=$(parentEle[1]).text();
 			obj.start=$(parentEle[2]).text();
 			obj.end=$(parentEle[3]).text()
-			checkData.push(obj);
+			$scope.comCkListdata.push(obj);
 			$.ajax({
 				url:'/trafficAll',
 				type:'POST',
@@ -634,9 +655,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				}
 			});
 		});	
-		$scope.$apply(function(){
-			$scope.comCkListdata = checkData;
-		});
+		$scope.$apply();
 		console.log(option_line);
 		$('#addModal').modal('hide');
 	});
