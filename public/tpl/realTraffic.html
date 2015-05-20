@@ -1,7 +1,7 @@
 <div class="timePick">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading"> <span class="caret"></span>流量信息 <span>{{trafficName}}</span><span> {{mstartTime}} </span><span>~{{mendTime}}</span><input type="hidden" value={{mid}} id="mid"></div>
+	  <div class="panel-heading"> <span class="caret"></span>流量信息 <span>{{trafficName}}</span><span> {{mstartTime}} </span><span>~ {{mendTime}}</span><input type="hidden" value={{mid}} id="mid"></div>
 	  <div class="panel-content">
 	  	<div class="searchHelp">
 	  		<div class="form-group">
@@ -14,11 +14,11 @@
 		 			<option value="5">包长分布</option>
 		 		</select>
 	  			<label for="" class="Searchlabel">开始时间</label>
-	  			<input size="13" type="text" readonly class="form_datetime" id="startTime" datepicker ng-model="dateStart" date-error="errMessage"><span style="font-weight:bold">:</span>
+	  			<input size="16" type="text" readonly class="form_datetime" id="startTime" datepicker ng-model="dateStart" date-error="errMessage"><span style="font-weight:bold">:</span>
 		 		<input type="number"  min="0" max="59" id="startSec" style="width:70px;">秒 <!-- </br> -->
 			 			 	
 			 	<label for="" class="Searchlabel">结束时间</label>
-			 		<input size="13" type="text" readonly class="form_datetime" id="endTime" datepicker ng-model="dateEnd" date-error="errMessage"><span style="font-weight:bold">:</span>
+			 		<input size="16" type="text" readonly class="form_datetime" id="endTime" datepicker ng-model="dateEnd" date-error="errMessage"><span style="font-weight:bold">:</span>
 		 		<input type="number"  min="0" max="59" id="endSec" style="width:70px;">秒 <!-- </br> -->
 		 		<label for="" class="Searchlabel">端口</label>
 			 	<select name="port" id="portId">
@@ -112,7 +112,7 @@
 	    	</tr>
 	    </thead>
 	    <tbody>
-			<tr ng-repeat="data in comInfos"><td><input id="{{data.id}}" name="comCheck" type='checkbox'></td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
+			<tr ng-repeat="data in comInfos"><td><input id="{{data.id}}" name="comCheck" type='checkbox' ng-disabled='{{data.disable}}'></td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
         </tbody>
 	</table>
     </div>

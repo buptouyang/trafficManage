@@ -7,6 +7,7 @@ var path = require('path');
 var mysql = require('mysql');
 var config = require('./config');
 var port = 3000;  
+var typeArray =['',"traffic","package","tuple","fragment","packetdistribution"];
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.bodyParser());
 /*app.get('/',function(req,res,next){
@@ -15,7 +16,13 @@ app.use(express.bodyParser());
 function NormalDate(utc){
     var date = new Date(utc*1000);
     var ndt;
-    ndt = date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()+" "+(date.getHours())+":"+date.getMinutes()+":"+date.getSeconds();
+    function checkTime(i){
+      if (i<10){
+          i = "0" + i;
+      }
+      return i;
+  }
+    ndt = date.getFullYear()+"/"+checkTime(date.getMonth()+1)+"/"+checkTime(date.getDate())+" "+checkTime(date.getHours())+":"+checkTime(date.getMinutes())+":"+checkTime(date.getSeconds());
     return ndt;
 }
 function UTCDay(daystring) {
@@ -160,8 +167,8 @@ app.get('/exceldata', function(req, res,next){
     case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
   queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
-  queryObj.start!='0'?(queryExpression+=" and t_start >="+queryObj.start,10):'';
-  queryObj.end!='0'?(queryExpression+=" and t_end <="+queryObj.end,10):'';
+  queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start,10):'';
+  queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end,10):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
   queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
@@ -178,25 +185,37 @@ app.get('/exceldata', function(req, res,next){
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
         } else {  //有结果
+            var wstart,wend;
             db.query('select t_start,t_end from TRAFFIC_INFO where t_id='+queryObj.tId,function(err,timeResults){
               var formalTime = timeResults[0].t_start;
               var tendTime = formalTime+timeResults[0].t_end;
               var conf ={};
-              var confrowdata=new Array();           
+              var confrowdata=new Array();
+              if(queryObj.start!=0 ){
+                wstart = NormalDate(formalTime+parseInt(queryObj.start,10)).replace(/[\/\:]/g,'-');
+              }else{
+                wstart = NormalDate(formalTime).replace(/[\/\:]/g,'-');
+              }
+              if(queryObj.end!=0){
+                wend = NormalDate(formalTime+parseInt(queryObj.end,10)).replace(/[\/\:]/g,'-');
+              }else{
+                wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
+              }           
               if(type == '5'){
                 var rowdata =new Array();
-                if(queryObj.start!=0){
-                  console.log(queryObj.start)
-                  rowdata.push(queryObj.start);
+                if(queryObj.start!=0 ){
+                  wstart = NormalDate(formalTime+parseInt(queryObj.start,10));
+                  rowdata.push(wstart);
                 }else{
-                  console.log(NormalDate(formalTime))
-                  rowdata.push(NormalDate(formalTime));
+                  wstart = NormalDate(formalTime);
+                  rowdata.push(wstart);
                 }
                 if(queryObj.end!=0){
-                  rowdata.push(queryObj.end);
+                  wend = NormalDate(formalTime+parseInt(queryObj.end,10));
+                  rowdata.push(wend);
                 }else{
-                  console.log(NormalDate(tendTime))
-                  rowdata.push(NormalDate(tendTime));
+                  wend = NormalDate(tendTime);
+                  rowdata.push(wend);
                 }
                 for(value in results[0]){
                   if(value != 'time'){
@@ -287,12 +306,22 @@ app.get('/exceldata', function(req, res,next){
                       type:'number',
                       width:20
                   }];
+              }//非饼状
+              var userAgent = (req.headers['user-agent']||'').toLowerCase();
+ 
+              if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
+                  res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(typeArray[type]) +wstart+"__"+wend+".xlsx");
+              } else if(userAgent.indexOf('firefox') >= 0) {
+                  res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[type])+wstart+'__'+wend+'.xlsx"');
+              } else {
+                  /* safari等其他非主流浏览器只能呵呵了 */
+                  res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(typeArray[type]).toString('binary')+wstart+"__"+wend+".xlsx");
               }
-              
+              console.log(wstart,wend,encodeURIComponent(typeArray[type]))
               var result = nodeExcel.execute(conf);
               res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-              res.setHeader('charset', 'utf-8');
-              res.setHeader("Content-Disposition", "attachment; filename="+"trafficdistribution.xlsx");
+              res.setHeader('charset', 'GB2312');
+              //res.setHeader("Content-Disposition", "attachment; filename="+encodeURIComponent(typeArray[type])+wstart+"__"+wend+".xlsx");
               res.end(result, 'binary');
             });
             
