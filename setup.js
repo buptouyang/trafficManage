@@ -3,7 +3,7 @@ var config = require('./config');
 delete config.database;
 var db = mysql.createClient(config);
 /*db.query("CREATE DATABASE traffic");*/
-db.query("USE traffic");
+db.query("USE traffic_real");
 /*db.query('DROP TABLE IF EXISTS packetdistribution');
 db.query('CREATE TABLE packetdistribution('+
 	'time VARCHAR(25),'+
@@ -24,14 +24,18 @@ db.query('CREATE TABLE user('+
 	'user VARCHAR(256) NOT NULL,'+
 	'psw VARCHAR(256) NOT NULL,'+
 	'PRIMARY KEY (id))'	);*/
-db.query('DROP TABLE IF EXISTS machine_info');
-db.query('CREATE TABLE machine_info('+
-	'm_id int(11) NOT NULL AUTO_INCREMENT,'+
-	'm_name varchar(32) NOT NULL UNIQUE,'+
-	'm_capture_flag smallint(6),'+
-	'm_generate_flag smallint(6),'+
-	'm_valid_flag smallint(6),'+
-	'PRIMARY KEY (m_id))'	);
+/*db.query('DROP TABLE IF EXISTS trans_type');
+db.query('CREATE TABLE trans_type('+
+	'trans_id int(11) NOT NULL AUTO_INCREMENT,'+
+	'trans_name varchar(32) NOT NULL,'+
+	'PRIMARY KEY (trans_id))'	);*/
+db.query('DROP TABLE IF EXISTS net_type');
+db.query('CREATE TABLE net_type('+
+	'net_id int(11) NOT NULL AUTO_INCREMENT,'+
+	'net_name varchar(32) NOT NULL,'+
+	'trans_id int(11) NOT NULL,'+
+	'FOREIGN KEY (trans_id) REFERENCES trans_type(trans_id) ON DELETE CASCADE,'+
+	'PRIMARY KEY (net_id))'	);
 
 db.end(function(){
 	process.exit();

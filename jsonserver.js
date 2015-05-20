@@ -70,9 +70,11 @@ app.post('/trafficDetail', function(req, res,next){
   queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
-  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
-  queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';  
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
+  if(queryObj.netPro != '' && queryObj.netPro != '99'){
+    queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  }
   if(type != 5){
     queryExpression +=" group by c_time";
   }
@@ -80,7 +82,7 @@ app.post('/trafficDetail', function(req, res,next){
   db.query(queryExpression,function(err,results){
     console.log(results.length);
       if(err) return next(err);
-        if(!results[0]){ //无查询结果 
+        if(!results[0] || results[0].time == null ){ //无查询结果 
             var message={'status':1,'message':"无查询结果"};
             var str =  JSON.stringify(message);
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
@@ -177,16 +179,16 @@ app.get('/exceldata', function(req, res,next){
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    //console.log(results);
+    console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果 
-            var message={'status':1,'message':"无查询结果"};
-            var str =  JSON.stringify(message);
+            //var message={'status':1,'message':"无查询结果"};
+            var str = 'no data';
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
         } else {  //有结果
             var wstart,wend;
-            db.query('select t_start,t_end from TRAFFIC_INFO where t_id='+queryObj.tId,function(err,timeResults){
+            db.query('select t_start,t_end,t_name from TRAFFIC_INFO where t_id='+queryObj.tId,function(err,timeResults){
               var formalTime = timeResults[0].t_start;
               var tendTime = formalTime+timeResults[0].t_end;
               var conf ={};
@@ -200,7 +202,8 @@ app.get('/exceldata', function(req, res,next){
                 wend = NormalDate(formalTime+parseInt(queryObj.end,10)).replace(/[\/\:]/g,'-');
               }else{
                 wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
-              }           
+              }    
+
               if(type == '5'){
                 var rowdata =new Array();
                 if(queryObj.start!=0 ){
@@ -310,7 +313,7 @@ app.get('/exceldata', function(req, res,next){
               var userAgent = (req.headers['user-agent']||'').toLowerCase();
  
               if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
-                  res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(typeArray[type]) +wstart+"__"+wend+".xlsx");
+                  res.setHeader('Content-Disposition', 'attachment; filename=' + timeResults[0].t_name +'__' +encodeURIComponent(typeArray[type]) +wstart+"__"+wend+".xlsx");
               } else if(userAgent.indexOf('firefox') >= 0) {
                   res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[type])+wstart+'__'+wend+'.xlsx"');
               } else {
@@ -327,6 +330,42 @@ app.get('/exceldata', function(req, res,next){
             
           }//end of excel
     });   
+});
+//传输协议
+app.get('/transInfo', function(req, res,next){
+  var id = req.query.id || null;
+  var queryExpression="select t.trans_name as name,t.trans_id as id from net_type n,trans_type t where t.trans_id=n.trans_id and n.net_id="+id;
+  console.log(queryExpression)
+  db.query(queryExpression,function(err,results){
+    console.log(results)
+    if(err){
+      console.log('无记录:'+err.message);
+      return next(err);
+    } else {
+      var data={'status':0,dataList:[]};
+      data.dataList = results;
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }
+  });
+});
+
+//网络协议
+app.get('/netInfo', function(req, res,next){
+  var queryExpression="select net_id as id,net_name as name from net_type group by net_id";
+  console.log(queryExpression)
+  db.query(queryExpression,function(err,results){
+    console.log(results);
+    if(err){
+      console.log('无记录:'+err.message);
+      return next(err);
+    } else {
+      var data={'status':0,dataList:[]};
+      data.dataList = results;
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }
+  });
 });
 app.get('/trafficInfo', function(req, res,next){
   var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
@@ -457,7 +496,7 @@ app.post('/newMachine', function(req, res,next){
 //修改机器
 app.post('/updateMachine', function(req, res,next){
   var queryObj = req.body;
-  var queryExpression = 'update machine_info set m_name="'+queryObj.machine+'",m_capture_flag='+queryObj.capture+',m_generate_flag='+queryObj.generate+',m_valid_flag='+queryObj.valid+' where m_id='+queryObj.id;
+  var queryExpression = 'update machine_info set m_capture_flag='+queryObj.capture+',m_generate_flag='+queryObj.generate+',m_valid_flag='+queryObj.valid+' where m_id='+queryObj.id;
   console.log(queryExpression)
   db.query(queryExpression,function(err,results){
     if(err){

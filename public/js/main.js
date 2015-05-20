@@ -206,7 +206,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	$.cookie('mendTime') && ($scope.mendTime = $.cookie('mendTime'));
 	$.cookie('mid') && ($scope.mid = $.cookie('mid'));
 	console.log($scope.trafficName);
-	
+	$scope.lenArray = [{name:$scope.trafficName}];
 	//$scope.radius = 180;
 	var option_pie;
 	var option_line = 
@@ -246,7 +246,38 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	        ],
 	        series : []
 	    };
-	
+	$.ajax({
+		url:'/netInfo',
+		type:'get',
+		dataType:'json',
+		success:function(data){
+			if(data.status == 0 && data.dataList){
+				$scope.net = data.dataList;
+				$("#netPro").trigger('change');
+				$scope.$apply();
+			}
+		}
+	});
+	$("#netPro").change(function(e){
+		var id = $("#netPro").val();
+		if(id == '' || id == '99'){
+			$scope.transDis = true;
+		}else{
+			$scope.transDis = false;
+		}
+		$.ajax({
+			url:'/transInfo',
+			type:'get',
+			data:{id:id},
+			dataType:'json',
+			success:function(data){
+				if(data.status == 0 && data.dataList){
+					$scope.trans = data.dataList;
+					$scope.$apply();
+				}
+			}
+		});
+	})
     function initOption(option,title,legend,x,series){
     	if(!option){
     		return;
@@ -505,6 +536,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			var valueData = [];	
 			var timeData = [];
 			$scope.compDis = false;
+			$scope.lenArray[0].len = data.dataList.length;
 			$scope.$apply();
 			//
 /*			var i=-1;
@@ -637,6 +669,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					if(data.status==0){
 						var dataValue = [],timeValue = [];
 						$scope.comCkListdata.push(obj);
+						$scope.lenArray.push({'name':obj.name,'len':data.dataList.length});				
 						$scope.$apply();
 						if(type == '5'){
 							
@@ -708,6 +741,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				myChart.clear();
 				myChart.setOption(option_pie);
 			}else{
+				var maxLen = 0;
 				$.each(option_line.series,function(index,item){
 					if(tname == item.name){
 						option_line.series.splice(index,1);
@@ -720,6 +754,21 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						return false;
 					}
 				});	
+				/*$.each($scope.lenArray,function(index,data) {
+					if(tname == data.name){
+						$scope.lenArray.splice(index,1);
+						return false;
+					}
+				});
+				$.each($scope.lenArray,function(index,item){
+					var len = item.len;
+					if(maxLen < len){
+						maxLen = len;
+					}
+				});
+				option_line.xAxis[0].data.splice(maxLen,option_line.xAxis[0].data.length-maxLen);
+*/
+
 				myChart.clear();
 				myChart.setOption(option_line);
 			}
@@ -982,7 +1031,7 @@ routeApp.controller('machineCtl',function($scope,$http){
 			$.ajax({
 				url:'/updateMachine',
 				type:'POST',
-				data:{machine:name,capture:capture,generate:generate,valid:valid,id:id},
+				data:{capture:capture,generate:generate,valid:valid,id:id},
 				dataType:'json',
 				success:function(data){
 					if(data.status==0){

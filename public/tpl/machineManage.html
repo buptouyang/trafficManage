@@ -1,7 +1,7 @@
 <div class="trafficDesc">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading"> <span class="caret"></span>机器管理<button class='btn btn-warning' data-toggle='modal' data-target="#editModal" name="addMachine">添加</button></div>
+	  <div class="panel-heading"> <span class="caret"></span>机器管理<!-- <button class='btn btn-warning' data-toggle='modal' data-target="#editModal" name="addMachine">添加</button> --></div>
 	  <div class="panel-content">
 			<table class="table">
 			    <thead>
@@ -26,10 +26,10 @@
       </div>
       <div class="modal-body">
         <div class="machineForm">
-          <div class="form-group">
-            <label class="control-label">机器名称:</label>
-            <input type="text" id="newName">
-          </div>  
+      <div class="form-group">
+          <label class="control-label">机器名称:</label>
+          <input type="text" id="newName" disabled>
+        </div> 
           <div class="form-group">
             <label class="control-label">捕获报文:</label>
             <input type="radio" name="cap" value='1' checked>能捕获报文
@@ -49,8 +49,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>
-        <button type="button" class="btn btn-primary edit" id="newBtn">新建</button>
-        <button type="button" class="btn btn-primary edit" id="updateBtn" style="display:none">更新</button>
+        <!-- <button type="button" class="btn btn-primary edit" id="newBtn">新建</button> -->
+        <button type="button" class="btn btn-primary edit" id="updateBtn">确定</button>
       </div>
     </div>
   </div>

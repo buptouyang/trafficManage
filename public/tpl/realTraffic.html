@@ -29,16 +29,12 @@
 		 		<label for="" class="Searchlabel">网络协议</label>
 			 	<select name="net_pro" id="netPro">
 			 		<option value="">所有</option>
-		 			<option value="0">IPV4</option>
-		 			<option value="1">IPV6</option>
-		 			<option value="2">其他</option>
+		 			<option ng-repeat="data in net" value="{{data.id}}">{{data.name}}</option>
 		 		</select>
 		 		<label for="" class="Searchlabel">传输层协议</label>
-			 	<select name="trans_pro" id="transPro">
+			 	<select name="trans_pro" id="transPro" ng-disabled='transDis'>
 			 		<option value="">所有</option>
-			 		<option value="0">TCP</option>
-		 			<option value="1">UDP</option>
-		 			<option value="2">其他</option>
+			 		<option ng-repeat="data in trans" value="{{data.id}}">{{data.name}}</option>
 		 		</select>
 		 		
 	  		</div>
