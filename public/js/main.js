@@ -593,6 +593,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
 				});
 				lineSeries.data = valueData;
+				if(type == '4'){
+					option_line.yAxis[0].axisLabel.formatter = '{value}';
+				}else{
+					option_line.yAxis[0].axisLabel.formatter =  function(value){
+                    	return Math.round(value/1024);
+                    };
+				}
 				initOption(option_line,legendText[type],[$scope.trafficName],timeData,lineSeries);
 				myChart?myChart.clear():'';
 				myChart.setOption(option_line);
@@ -669,7 +676,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					if(data.status==0){
 						var dataValue = [],timeValue = [];
 						$scope.comCkListdata.push(obj);
-						$scope.lenArray.push({'name':obj.name,'len':data.dataList.length});				
 						$scope.$apply();
 						if(type == '5'){
 							
@@ -702,6 +708,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 								dataValue.push(item.sumData);
 								timeValue.push(item.time);
 							});
+							$scope.lenArray.push({'name':obj.name,'len':dataValue.length});
 							series.name = obj.name;
 							series.type = 'line';
 							series.data = dataValue;
@@ -754,7 +761,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						return false;
 					}
 				});	
-				/*$.each($scope.lenArray,function(index,data) {
+				$.each($scope.lenArray,function(index,data) {
 					if(tname == data.name){
 						$scope.lenArray.splice(index,1);
 						return false;
@@ -766,9 +773,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						maxLen = len;
 					}
 				});
-				option_line.xAxis[0].data.splice(maxLen,option_line.xAxis[0].data.length-maxLen);
-*/
-
+				var timeLen = option_line.xAxis[0].data.length;
+				if(timeLen>maxLen){
+					option_line.xAxis[0].data.splice(maxLen,timeLen-maxLen);
+					option_line.series[0].data.splice(maxLen,timeLen-maxLen);
+				}
 				myChart.clear();
 				myChart.setOption(option_line);
 			}
