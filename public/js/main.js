@@ -997,10 +997,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		    });
 		}
 	});*/
-    $('#addModal').on('show.bs.modal', function (event) {
-	  $.ajax({
+$scope.addCompareTraffic = function(query){
+	$.ajax({
 		url:'/trafficInfo',
 		type:'GET',
+		data:{queryStr:query},
 		dataType:'json',
 		success:function(data){
 			if(data.status==0 && data.dataList){
@@ -1026,6 +1027,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			}
 		}
 	  });	
+}
+$("body").delegate("#query","click",function(e){
+	var queryStr = $.trim($("#queryString").val());
+	$scope.addCompareTraffic(queryStr);
+})
+    $('#addModal').on('show.bs.modal', function (event) {
+	  $scope.addCompareTraffic('');	
 	});
 });
 	
