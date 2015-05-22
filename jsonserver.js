@@ -67,7 +67,7 @@ app.post('/trafficDetail', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
+  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';  
@@ -168,7 +168,7 @@ app.get('/exceldata', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
+  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start,10):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end,10):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
@@ -188,7 +188,7 @@ app.get('/exceldata', function(req, res,next){
             res.end(str);
         } else {  //有结果
             var wstart,wend;
-            db.query('select t_start,t_end,t_name from TRAFFIC_INFO where t_id='+queryObj.tId,function(err,timeResults){
+            db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
               var formalTime = timeResults[0].t_start;
               var tendTime = formalTime+timeResults[0].t_end;
               var conf ={};
@@ -368,7 +368,9 @@ app.get('/netInfo', function(req, res,next){
   });
 });
 app.get('/trafficInfo', function(req, res,next){
-  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,t.t_end as end from TRAFFIC_INFO t,machine_info m where t.m_id=m.m_id order by t.t_id DESC";
+  req.param;
+  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+  queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by c.t_id order by t.t_id DESC";
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
@@ -379,6 +381,11 @@ app.get('/trafficInfo', function(req, res,next){
             res.end(str);         
         } else {  //有结果
             var data={'status':0,dataList:[]};
+            results.forEach(function(item,index) {
+              if(item.end==null){
+                item.end = 0;
+              }
+            });
             data.dataList=results;
             var str =  JSON.stringify(data); 
             res.end(str);
@@ -397,7 +404,7 @@ app.post('/realTime', function(req, res,next){
     case 3:queryExpression +=" sum(tuple_num) as sumData";break;
     case 4:queryExpression +=" sum(frag_num) as sumData";break;
   }
-  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+queryObj.tId;
+  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
   queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
@@ -430,7 +437,7 @@ app.post('/trafficAll', function(req, res,next){
     case 4:queryExpression +=" sum(frag_num) as sumData";break;
     case 5:queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
   }
-  queryExpression+=",c_time as time from CAPTURE_TRAFFIC where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
+  queryExpression+=",c_time as time from capture_traffic where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
   if(type != 5){
     queryExpression +=" group by c_time";
   }
@@ -444,7 +451,18 @@ app.post('/trafficAll', function(req, res,next){
           res.end(str);
         } else {  //有结果
             var data={'status':0,dataList:[]};
-            data.dataList=results;
+            var tempValue = 0;
+            if(req.body.total == 'true'){
+              results.forEach(function(item,index) {
+                var totalvalue = {};
+                tempValue+=parseInt(item.sumData,10);
+                totalvalue.time = item.time;
+                totalvalue.sumData = tempValue
+                data.dataList.push(totalvalue);
+              });
+            }else{
+              data.dataList=results;
+            }            
             var str =  JSON.stringify(data); 
             res.end(str);
         }
@@ -534,15 +552,20 @@ app.post('/newTask', function(req, res,next){
   }else{ //相对时间
     end = queryObj.end;
   }
-  var queryExpression = 'insert into traffic_info(m_id,t_start,t_end,t_run_flag) values('+queryObj.machine+','+start+',';
+  var queryExpression = 'insert into traffic_info(m_id,t_name,t_start,t_end,t_run_flag) values('+queryObj.machine+',"'+queryObj.name+'",'+start+',';
   queryExpression+=end+',0)';
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     if(err){
+      if(err.message == "Duplicate entry 'traffic' for key 't_name_UNIQUE'"){
+        var data={'status':1,message:"任务名称重复，请重新输入"};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      }    
       console.log('插入记录出错:'+err.message);
       return next(err);
-    } else{
-      var data={'status':0,dataList:[]};
+    } else {
+      var data={'status':0,message:"新建成功"};
       var str =  JSON.stringify(data); 
       res.end(str);
     }  
@@ -718,7 +741,7 @@ app.get('/search', function(req, res,next){
   switch (req.query.ptype){
     case "packagePer":{
       var dataArray = new Array(0,0,0,0,0,0,0,0,0,0);    
-      db.query("select * from CAPTURE_TRAFFIC where t_id =? and port_id =? and net_pro =? and time >=? and time <=?",[req.query.start,req.query.end],function(err,results){ 
+      db.query("select * from capture_traffic where t_id =? and port_id =? and net_pro =? and time >=? and time <=?",[req.query.start,req.query.end],function(err,results){ 
         if(err) return next(err);
         if(!results) return res.send(404);
         results.forEach(function(item,index){       

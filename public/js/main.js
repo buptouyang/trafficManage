@@ -87,6 +87,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		}
 	});	
 	$("#newTask").click(function(e){
+		var name = $("#taskName").val();
 		var type = 	$("input[name='machineType']").val();
 		$scope.taskInfo.machine = $("#machineList").val();
 		//开始时间
@@ -109,30 +110,35 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		}else{
 			$scope.taskInfo.end = endSec;
 		}
-		if($scope.taskInfo.start < $scope.taskInfo.end){
-			$.ajax({
-				url:'/newTask',
-				type:'POST',
-				data:$scope.taskInfo,
-				dataType:'json',
-				success:function(data){
-					if(data.status==0){
-						$('#editModal').modal('hide');
-						location.reload();
+		if(name != ''){
+			$scope.taskInfo.name = name;
+			if($scope.taskInfo.start < $scope.taskInfo.end){
+				$.ajax({
+					url:'/newTask',
+					type:'POST',
+					data:$scope.taskInfo,
+					dataType:'json',
+					success:function(data){
+						if(data.status==0){
+							$('#editModal').modal('hide');
+							location.reload();
+						}else{
+							alert(data.message);
+						}
 					}
-				}
-			});
+				});
+			}else{
+				$("#newModal .modal-body").append('<div class="form-group"><div class="col-sm-offset-2"><p class="text-danger">结束时间早于开始时间，请重新选择</p></div></div>');
+			}
 		}else{
-			$("#newModal .modal-body").append('<div class="form-group"><div class="col-sm-offset-2"><p class="text-danger">结束时间早于开始时间，请重新选择</p></div></div>');
-		}
-		
+			alert("任务名称必填");
+		}		
 	});
 
 	$("body").delegate("[name='machineType']:checked","change",function(e){	
 		var type = 	$("input[name='machineType']:checked").val();
 		$scope.taskInfo.type = type;
 		e.stopPropagation();
-		debugger
 		$.ajax({
 			url:'/machineFunc',
 			type:'POST',
@@ -212,7 +218,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	var option_line = 
 		{
 	        title : {
-	            text: ''
+	            text: '',
+	            subtextStyle:{
+	            	baseline:'top',
+	            	color:'red'
+	            },
+	            padding:10,
+	            itemGap:-25
 	        },
 	        tooltip : {
 	            trigger: 'item'
@@ -443,7 +455,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     		dataType:'json',
     		success:function(data){
     			if(data.status == 0 && data.dataList){
-    				callback(data,type);
+    				callback(data,type,totalBoolean);
     				localStorage.setItem('searchData',JSON.stringify(data.dataList));					 
     			}
     		}
@@ -531,7 +543,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             data:[]
         }
         
-        search(function(data,type){
+        search(function(data,type,total){
 			var lengendData = [];
 			var valueData = [];	
 			var timeData = [];
@@ -600,6 +612,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
                     	return Math.round(value/1024);
                     };
 				}
+				if(total){
+					option_line.title.subtext='总量:'+data.dataList[data.dataList.length-1].sumData;
+				}else{
+					option_line.title.subtext='';
+				}
 				initOption(option_line,legendText[type],[$scope.trafficName],timeData,lineSeries);
 				myChart?myChart.clear():'';
 				myChart.setOption(option_line);
@@ -656,8 +673,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	myChart?myChart.clear():'';
 		var checkEle = $("input[name='comCheck']:checked");
 		var checkData = [];
-
 		var type = $('#searchType').val();
+		var totalBoolean = $('#totalUp').prop('checked');
 		$.each(checkEle,function(index,item){
 			var obj={};
 			var parentEle = $(item).parent().siblings();
@@ -671,7 +688,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				url:'/trafficAll',
 				type:'POST',
 				dataType:'json',
-				data:{type:type,id:obj.id},
+				data:{type:type,id:obj.id,total:totalBoolean},
 				success:function(data){
 					if(data.status==0){
 						var dataValue = [],timeValue = [];
