@@ -69,23 +69,32 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			}
 		});
 	}
-	$.ajax({
-		url:'/trafficInfo',
-		type:'GET',
-		dataType:'json',
-		success:function(data){
-			var statusArray = ['准备运行','正在运行','结束运行'];
-			if(data.status==0 && data.dataList){
-				$.each(data.dataList,function(index,item){
-					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
-					item.status = statusArray[item.status];
-				});
-				$scope.$apply(function(){
-					$scope.infos = data.dataList;
-				});
+	$scope.query=function(e){
+		var query = $.trim($('#queryString').val());
+		$scope.getList(query);
+	}
+	$scope.getList = function(query){
+		$.ajax({
+			url:'/trafficInfo',
+			type:'GET',
+			data:{queryStr:query},
+			dataType:'json',
+			success:function(data){
+				var statusArray = ['准备运行','正在运行','结束运行'];
+				if(data.status==0 && data.dataList){
+					$.each(data.dataList,function(index,item){
+						item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+						item.status = statusArray[item.status];
+					});
+					$scope.$apply(function(){
+						$scope.infos = data.dataList;
+					});
+				}
 			}
-		}
-	});	
+		});
+	}
+	$scope.getList('');
+		
 	$("#newTask").click(function(e){
 		var name = $("#taskName").val();
 		var type = 	$("input[name='machineType']").val();

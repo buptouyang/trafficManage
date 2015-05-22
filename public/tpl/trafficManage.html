@@ -1,7 +1,7 @@
 <div class="trafficDesc">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading"> <span class="caret"></span>真实流量源<button class="btn btn-warning" data-toggle='modal' data-target="#newModal">新建</button></div>
+	  <div class="panel-heading" style="overflow: hidden;"> <span class="caret"></span>真实流量源<button class="btn btn-warning pull-right" data-toggle='modal' data-target="#newModal">新建</button><button class="btn btn-default pull-right" id="query" ng-click="query($event)">查询</button><input type='text' id="queryString" style="color:#000;float:right;margin:4px"></div>
 	  <div class="panel-content">
 			<table class="table">
 			    <thead>

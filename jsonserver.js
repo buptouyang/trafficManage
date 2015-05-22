@@ -368,9 +368,15 @@ app.get('/netInfo', function(req, res,next){
   });
 });
 app.get('/trafficInfo', function(req, res,next){
-  req.param;
-  var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-  queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by c.t_id order by t.t_id DESC";
+  console.log(req.query)
+  if(req.query.queryStr == ''){
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by c.t_id order by t.t_id DESC";
+  }else{
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like '%"+req.query.queryStr+"%' group by c.t_id order by t.t_id DESC";
+  }
+  console.log(queryExpression)
   db.query(queryExpression,function(err,results){
     console.log(results);
       if(err) return next(err);
