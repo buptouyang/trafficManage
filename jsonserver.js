@@ -416,6 +416,41 @@ app.get('/trafficInfo', function(req, res,next){
         }
   });
 });
+app.get('/trafficCap', function(req, res,next){
+  console.log(req.query);
+  var page = req.query.page;
+  if(req.query.queryStr == ''){
+    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";
+   
+  }else{
+    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from traffic_info t left join capture_traffic c using(t_id) where t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
+    
+  }
+  console.log(queryExpression);
+  db.query(queryExpression,function(err,results){
+   console.log(results.length);
+      if(err) return next(err);
+        if(!results[0]){ //无查询结果
+            var message={'status':1,'message':"无查询结果"};
+            var str =  JSON.stringify(message);
+            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+            res.end(str);         
+        } else {  //有结果
+            var data={'status':0,dataList:[],totalPng:0};
+            results.forEach(function(item,index) {
+              if(item.end==null){
+                item.end = 0;
+              }
+            });
+            data.totalPng = Math.ceil(results.length/10);
+            data.dataList=results.slice((page-1)*10,page*10);
+            var str =  JSON.stringify(data); 
+            res.end(str);
+        }
+  });
+});
 //实时流量
 app.post('/realTime', function(req, res,next){
   var queryExpression = 'select';

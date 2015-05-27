@@ -1147,7 +1147,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	});*/
 $scope.addCompareTraffic = function(query,page){			
 	$.ajax({
-		url:'/trafficInfo',
+		url:'/trafficCap',
 		type:'GET',
 		data:{queryStr:query,page:page},
 		dataType:'json',
