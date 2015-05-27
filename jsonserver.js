@@ -368,17 +368,22 @@ app.get('/netInfo', function(req, res,next){
   });
 });
 app.get('/trafficInfo', function(req, res,next){
-  console.log(req.query)
+  console.log(req.query);
+  var page = req.query.page;
   if(req.query.queryStr == ''){
-    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id order by t.t_id DESC";
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
+    queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC";
   }else{
-    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like '%"+req.query.queryStr+"%' group by t.t_id order by t.t_id DESC";
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
+    queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC";
   }
-  console.log(queryExpression)
+  console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    console.log(results);
+   console.log(results.length);
       if(err) return next(err);
         if(!results[0]){ //无查询结果
             var message={'status':1,'message':"无查询结果"};
@@ -386,13 +391,26 @@ app.get('/trafficInfo', function(req, res,next){
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);         
         } else {  //有结果
-            var data={'status':0,dataList:[]};
+            var data={'status':0,dataList:[],totalPng:0};
             results.forEach(function(item,index) {
               if(item.end==null){
                 item.end = 0;
               }
+              if(item.status == 2){
+                item.disable = true;
+              }else{
+                item.disable = false;
+              }
+              if(item.type == 2){
+                item.type = '生成';
+                item.cap = 'false';
+              }else{
+                item.type = '捕获';
+                item.cap = 'true';
+              }
             });
-            data.dataList=results;
+            data.totalPng = Math.ceil(results.length/10);
+            data.dataList=results.slice((page-1)*10,page*10);
             var str =  JSON.stringify(data); 
             res.end(str);
         }
@@ -545,7 +563,7 @@ app.post('/newTask', function(req, res,next){
     if(queryObj.startTimeType == '1'){//绝对时间
       start = queryObj.start;
     }else{
-      start = UTCDay(new Date())/1000 + queryObj.start;
+      start = UTCDay(new Date()) + queryObj.start;
     }   
   }
   if(queryObj.endTimeType == '1'){//绝对时间
@@ -558,8 +576,8 @@ app.post('/newTask', function(req, res,next){
   }else{ //相对时间
     end = queryObj.end;
   }
-  var queryExpression = 'insert into traffic_info(m_id,t_name,t_start,t_end,t_run_flag) values('+queryObj.machine+',"'+queryObj.name+'",'+start+',';
-  queryExpression+=end+',0)';
+  var queryExpression = 'insert into traffic_info(m_id,t_name,t_type,t_start,t_end,t_desc,t_run_flag) values('+queryObj.machine+',"'+queryObj.name+'",'+queryObj.type+','+start+',';
+  queryExpression+=end+',"'+queryObj.desc+'",0)';
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     if(err){
@@ -586,6 +604,35 @@ app.post('/stopTask', function(req, res,next){
     if(err){
       console.log('任务结束出错:'+err.message);
       var data={'status':1,message:'任务结束出错'};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+      return next(err);
+    } else{
+      var data={'status':0,dataList:[]};
+      var str =  JSON.stringify(data); 
+      res.end(str);
+    }  
+  })
+});
+//生成流量
+app.post('/geneTraffic', function(req, res,next){
+  var queryObj = req.body;
+  var start=0;
+  if(queryObj.execType == '1'){  //立即执行
+    start = UTCDay(new Date());
+  }else if(queryObj.execType == '2'){
+    if(queryObj.startTimeType == '1'){//绝对时间
+      start = queryObj.start;
+    }else{
+      start = UTCDay(new Date()) + parseInt(queryObj.start);
+    }
+  }
+  var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'",'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id;
+  console.log(queryExpression);
+  db.query(queryExpression,function(err,results){
+    if(err){
+      console.log('生成出错:'+err.message);
+      var data={'status':1,message:'生成出错'};
       var str =  JSON.stringify(data); 
       res.end(str);
       return next(err);

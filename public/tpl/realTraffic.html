@@ -109,9 +109,10 @@
 	    	</tr>
 	    </thead>
 	    <tbody>
-			<tr ng-repeat="data in comInfos"><td><input id="{{data.id}}" name="comCheck" type='checkbox' ng-disabled='{{data.disable}}'></td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
+			<tr ng-repeat="data in comInfos"><td><input id="{{data.id}}" name="comCheck" type='checkbox' ng-disabled='{{data.comdisable}}'></td><td>{{data.name}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td></tr>
         </tbody>
 	</table>
+	<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>	
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-primary" data-dismiss="modal" style="margin-left:55px;">取消</button>

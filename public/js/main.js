@@ -40,21 +40,48 @@ routeApp.factory('trafficInfo',function(){
 });
 routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	$scope.taskInfo = {};
+	$scope.geneTaskInfo = {};
 	$scope.searchClick=function(e){
 		var parentEle = $(e.target).parent();
 		trafficInfo.trafficName = parentEle.siblings()[1].innerHTML;
-		trafficInfo.mstartTime = parentEle.siblings()[5].innerHTML;
-		trafficInfo.mendTime = parentEle.siblings()[6].innerHTML;
-		trafficInfo.mid = parentEle.siblings()[7].value;
+		trafficInfo.mstartTime = parentEle.siblings()[6].innerHTML;
+		trafficInfo.mendTime = parentEle.siblings()[7].innerHTML;
+		trafficInfo.mid = parentEle.siblings()[8].value;
 		$.cookie('trafficName', trafficInfo.trafficName, { expires: 7 }); // 存储一个带7天期限的 cookie
 		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
 		$.cookie('mendTime', trafficInfo.mendTime, { expires: 7 });
 		$.cookie('mid', trafficInfo.mid, { expires: 7 }); 
 		console.log($.cookie())
 	}
+
+	 
+/*	$scope.generateClick=function(e){
+		var parentEle = $(e.target).parent();
+		var id = parentEle.siblings()[8].value;
+		$.ajax({
+			url:'/geneTraffic',
+			type:'POST',
+			data:{id:id},
+			dataType:'json',
+			success:function(data){
+				if(data.status==1){
+					alert(data.message);
+				}else{
+					$(e.target).prop('disabled','true');
+					$scope.infos.forEach(function(item,index) {
+						if(item.id == id){
+							item.status = '结束运行'; 
+							item.disable = 'true';
+						}
+					});
+					//$(parentEle.siblings()[3]).text('结束运行');
+				}
+			}
+		});
+	}*/
 	$scope.stopClick=function(e){
 		var parentEle = $(e.target).parent();
-		var id = parentEle.siblings()[7].value;
+		var id = parentEle.siblings()[8].value;
 		$.ajax({
 			url:'/stopTask',
 			type:'POST',
@@ -64,20 +91,34 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				if(data.status==1){
 					alert(data.message);
 				}else{
-					$(parentEle.siblings()[3]).text('结束运行');
+					$(e.target).prop('disabled','true');
+					$scope.infos.forEach(function(item,index) {
+						if(item.id == id){
+							item.status = '结束运行'; 
+							item.disable = 'true';
+						}
+					});
+					//$(parentEle.siblings()[3]).text('结束运行');
 				}
 			}
 		});
 	}
+	$scope.geneClick=function(e){
+		var parentEle = $(e.target).parent();
+		$scope.geneTaskInfo.id = $($(parentEle).siblings()[8]).val();
+		$scope.geneTaskInfo.desc = '依赖于流量：'+$($(parentEle).siblings()[1]).text();
+	}
 	$scope.query=function(e){
 		var query = $.trim($('#queryString').val());
-		$scope.getList(query);
+		$scope.getList(query,1);
 	}
-	$scope.getList = function(query){
+	$scope.getList = function(query,page){
+		$scope.page = 1;
+		
 		$.ajax({
 			url:'/trafficInfo',
 			type:'GET',
-			data:{queryStr:query},
+			data:{queryStr:query,page:page},
 			dataType:'json',
 			success:function(data){
 				var statusArray = ['准备运行','正在运行','结束运行'];
@@ -85,25 +126,67 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 					$.each(data.dataList,function(index,item){
 						item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
 						item.status = statusArray[item.status];
+						item.descript = item.descript?unescape(item.descript):'';
 					});
 					$scope.$apply(function(){
-						$scope.infos = data.dataList;
+						$scope.infos = data.dataList;	
 					});
 				}
+				$(".trafficDesc").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
+				$('#pagination-traffic').twbsPagination({
+			        totalPages: data.totalPng,
+			        visiblePages: 3,
+			        first:'第一页',
+			        prev:'前一页',
+			        next:'后一页',
+			        last:'最后一页',
+			        startPage:1,
+			        onPageClick: function (event, page) {
+			        	var query = $.trim($('#queryString').val());
+			            $scope.getList(query,page);
+			           /* $.ajax({
+							url:'/trafficInfo',
+							type:'GET',
+							data:{queryStr:query,page:page},
+							dataType:'json',
+							success:function(data){
+								var statusArray = ['准备运行','正在运行','结束运行'];
+								if(data.status==0 && data.dataList){
+									$.each(data.dataList,function(index,item){
+										item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+										item.status = statusArray[item.status];
+										item.descript = item.descript?unescape(item.descript):'';
+									});
+									$scope.$apply(function(){
+										$scope.infos = data.dataList;	
+									});
+								}
+								
+							   // $('#pagination-traffic').twbsPagination().destroy();
+							    
+							}
+						});*/
+			            $scope.page = page;
+			        }
+			    });
+			   // $('#pagination-traffic').twbsPagination().destroy();
+			    
 			}
 		});
 	}
-	$scope.getList('');
-		
+	$('#pagination-traffic').remove();
+	$scope.getList('',1);
+	$scope.page = 1;	
 	$("#newTask").click(function(e){
 		var name = $("#taskName").val();
-		var type = 	$("input[name='machineType']").val();
+		$scope.taskInfo.type = 1;      //$("input[name='machineType']").val();
 		$scope.taskInfo.machine = $("#machineList").val();
+		$scope.taskInfo.desc = escape($('#desc').val());
 		//开始时间
 		if($scope.taskInfo.execType == '1'){ //立即执行
 			$scope.taskInfo.start = 0;
 		}else{
-			var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
+			var startSec = $("#startSec").val()?parseInt($("#startSec").val(),10):0;
 			if($scope.taskInfo.startTimeType == '1'){
 				var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0; 	
 		    	$scope.taskInfo.start = startHour+startSec;
@@ -112,7 +195,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			}
 		}
 		//结束时间
-		var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;
+		var endSec = $("#endSec").val()?parseInt($("#endSec").val(),10):0;
 		if($scope.taskInfo.endTimeType == '1'){
 			var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0; 	
 	    	$scope.taskInfo.end = endHour+endSec;
@@ -143,8 +226,40 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			alert("任务名称必填");
 		}		
 	});
+	$("#geneNewTask").click(function(e){
+		$scope.geneTaskInfo.machine = $("#geneMachineList").val();
+		$scope.geneTaskInfo.name = $("#geneTaskName").val();
+		//开始时间
+		if($scope.geneTaskInfo.execType == '1'){ //立即执行
+			$scope.geneTaskInfo.start = 0;
+		}else{
+			var startSec = $("#geneStartSec").val()?parseInt($("#geneStartSec").val(),10):0;
+			if($scope.geneTaskInfo.startTimeType == '1'){
+				var startHour = $("#geneStartTime").val()?UTCDay($("#geneStartTime").val()):0; 	
+		    	$scope.geneTaskInfo.start = startHour+startSec;
+			}else{
+				$scope.geneTaskInfo.start = startSec;
+			}
+		}
+		$.ajax({
+			url:'/geneTraffic',
+			type:'POST',
+			data:$scope.geneTaskInfo,
+			dataType:'json',
+			success:function(data){
+				if(data.status==0){
+					$('#geneModal').modal('hide');
+					location.reload();
+				}else{
+					alert(data.message);
+				}
+			}
+		});
 
-	$("body").delegate("[name='machineType']:checked","change",function(e){	
+	
+	});
+
+/*	$("body").delegate("[name='machineType']:checked","change",function(e){	
 		var type = 	$("input[name='machineType']:checked").val();
 		$scope.taskInfo.type = type;
 		e.stopPropagation();
@@ -160,11 +275,11 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				}
 			}
 		});
-	});
+	});*/
 
 	$('#newModal').on('show.bs.modal', function (event) {
 		$("#newModal input[type='radio']").trigger('change');
-	 /* $.ajax({
+	  $.ajax({
 		url:'/machineFunc',
 		type:'POST',
 		data:{type:1},
@@ -176,7 +291,23 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				});
 			}
 		}
-	  });*/	
+	  });	
+	});
+	$('#geneModal').on('show.bs.modal', function (event) {
+		$("#geneModal input[type='radio']").trigger('change');
+		$.ajax({
+			url:'/machineFunc',
+			type:'POST',
+			data:{type:2},
+			dataType:'json',
+			success:function(data){
+				if(data.status==0 && data.dataList){
+					$scope.$apply(function(){
+						$scope.genemachines = data.dataList;
+					});
+				}
+			}
+		});	
 	});
 
 	$("body").delegate("input[name='execType']","change",function(e){	
@@ -188,7 +319,24 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			$(".start").css("display","none");
 		}
 	});
-
+	$("body").delegate("input[name='geneExecType']","change",function(e){	
+		var type = 	$("input[name='geneExecType']:checked").val();
+		$scope.geneTaskInfo.execType = type;
+		if(type == '2'){
+			$(".geneStart").css("display","block");
+		}else{
+			$(".geneStart").css("display","none");
+		}
+	});
+	$("body").delegate("input[name='geneStartCountType']","change",function(e){	
+		var type = 	$("input[name='geneStartCountType']:checked").val();
+		$scope.geneTaskInfo.startTimeType = type;
+		if(type == '1'){
+			$(".geneStartYearView").css("display","inline-block");
+		}else{
+			$(".geneStartYearView").css("display","none");
+		}
+	});
 	$("body").delegate("input[name='startCountType']","change",function(e){	
 		var type = 	$("input[name='startCountType']:checked").val();
 		$scope.taskInfo.startTimeType = type;
@@ -997,43 +1145,62 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		    });
 		}
 	});*/
-$scope.addCompareTraffic = function(query){
+$scope.addCompareTraffic = function(query,page){			
 	$.ajax({
 		url:'/trafficInfo',
 		type:'GET',
-		data:{queryStr:query},
+		data:{queryStr:query,page:page},
 		dataType:'json',
 		success:function(data){
 			if(data.status==0 && data.dataList){
 				$.each(data.dataList,function(index,item){
 					if(item.name == $scope.trafficName){
-						item.disable = true;
+						item.comdisable = true;
+					}
+					if(item.descript == null){
+						item.descript = '';
 					}
 					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
 					$.each($scope.comCkListdata,function(cpindex,cpItem){
 						if(cpItem.name == item.name || item.name == $scope.trafficName){
-							item.disable = true;
+							item.comdisable = true;
 							return false;
 						}else{
-							item.disable = false;
+							item.comdisable = false;
 						}
 					});
-					
+					item.descript = unescape(item.descript);	
 				});
-				console.log(data.dataList)
+				//console.log(data.dataList)
 				$scope.$apply(function(){
 					$scope.comInfos = data.dataList;
 				});
+				$("#addModal .modal-body").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
+				$('#pagination-traffic').twbsPagination({
+			        totalPages: data.totalPng,
+			        visiblePages: 3,
+			        first:'第一页',
+			        prev:'前一页',
+			        next:'后一页',
+			        last:'最后一页',
+			        startPage:1,
+			        onPageClick: function (event, page) {
+			        	var query = $.trim($('#queryString').val());
+			            $scope.addCompareTraffic(query,page);
+			        }
+			    });
 			}
 		}
 	  });	
 }
 $("body").delegate("#query","click",function(e){
 	var queryStr = $.trim($("#queryString").val());
-	$scope.addCompareTraffic(queryStr);
+	$("#pagination-traffic").remove();
+	$scope.addCompareTraffic(queryStr,1);
 })
     $('#addModal').on('show.bs.modal', function (event) {
-	  $scope.addCompareTraffic('');	
+    	$("#pagination-traffic").remove();
+	  	$scope.addCompareTraffic('',1);	
 	});
 });
 	

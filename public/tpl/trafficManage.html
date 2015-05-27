@@ -1,20 +1,21 @@
 <div class="trafficDesc">
 	<div class="panel panel-primary">
 	  <!-- Default panel contents -->
-	  <div class="panel-heading" style="overflow: hidden;"> <span class="caret"></span>真实流量源<button class="btn btn-warning pull-right" data-toggle='modal' data-target="#newModal">新建</button><button class="btn btn-default pull-right" id="query" ng-click="query($event)">查询</button><input type='text' id="queryString" style="color:#000;float:right;margin:4px"></div>
+	  <div class="panel-heading" style="overflow: hidden;"> <span class="caret"></span>流量任务 <button class="btn btn-warning pull-right" data-toggle='modal' data-target="#newModal">新建</button><button class="btn btn-default pull-right" id="query" ng-click="query($event)">查询</button><input type='text' id="queryString" style="color:#000;float:right;margin:4px"></div>
 	  <div class="panel-content">
 			<table class="table">
 			    <thead>
 			    	<tr>
-			    	<th>编号</th><th>真实流量名称</th><th>机器信息</th><th>状态</th><th>描述</th><th>开始时间</th><th>结束时间</th><th>操作</th>
+			    	<th>编号</th><th>流量任务</th><th>机器信息</th><th>状态</th><th style="word-break:break-all;width:200px">描述</th><th>功能</th><th>开始时间</th><th>结束时间</th><th>操作</th>
 			    	</tr>
 			    </thead>
 			    <tbody>
-<tr ng-repeat="data in infos"><td>{{$index+1}}</td><td>{{data.name}}</td><td>{{data.machine}}</td><td>{{data.status}}</td><td>{{data.descript}}</td><td>{{data.start}}</td><td>{{data.end}}</td><td><!-- <button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button> --><a class="btn btn-info" href="#/realTraffic" ng-click='searchClick($event)'>查看</a><button class="btn btn-danger" ng-click='stopClick($event)'>停止</button></td><input type="hidden" id="sequence" value="{{data.id}}"></tr>
+<tr ng-repeat="data in infos"><td>{{(page-1)*10+$index+1}}</td><td>{{data.name}}</td><td>{{data.machine}}</td><td>{{data.status}}</td><td>{{data.descript}}</td><td>{{data.type}}</td><td>{{data.start}}</td><td>{{data.end}}</td><td><!-- <button class="btn btn-warning" data-toggle='modal' data-target="#emulateModal">仿真</button> --><a class="btn btn-info" href="#/realTraffic" ng-click='searchClick($event)' ng-show={{data.cap}}>查看</a><button class="btn btn-danger" ng-click='stopClick($event)' ng-disabled={{data.disable}}>停止</button><button class="btn btn-success" ng-click='geneClick($event)' data-toggle='modal' data-target="#geneModal" ng-show={{data.cap}}>生成</button></td><input type="hidden" id="sequence" value="{{data.id}}"></tr>
 		        </tbody>
 			</table>
 	  </div>
-	</div>		
+	</div>	
+  <ul id="pagination-traffic" class="pagination-sm pull-right"></ul>	
 </div>  
 
 <div class="modal fade" id="newModal" tabindex="-1" role="dialog">
@@ -22,25 +23,136 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title">新建任务</h4>
+        <h4 class="modal-title">新建捕获任务</h4>
       </div>
       <div class="modal-body form-horizontal">
+      <div class="form-group">
+        <label class="col-sm-2 control-label">任务名称<span style="color:red;font-size:15px">*</span>:</label>
+        <div class="col-sm-4">
+          <input type="text" id="taskName">
+        </div>     
+      </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">任务名称<span style="color:red;font-size:15px">*</span>:</label>
-            <div class="col-sm-4">
-              <input type="text" id="taskName">
-            </div>     
+          <label class="col-sm-2 control-label">选择方式:</label>
+          <div class="col-sm-4">
+            <div class="radio">
+              <label>
+                <input type="radio" name="machineType" checked="checked" value="1" checked>捕获报文
+              </label>
+             <!--  <label>
+               <input type="radio" name="machineType" value="2">生成报文
+             </label> -->
+              
+            </div>
+            
           </div>
+          
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">选择机器:</label>
+          <div class="col-sm-4">
+            <select class="form-control" style="width:" id="machineList">
+              <option  ng-repeat="data in machines" value="{{data.id}}">
+                {{data.name}}
+              </option>
+            </select>
+          </div>     
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">执行方式:</label>
+          <div class="col-sm-4">
+            <div class="radio">
+              <label>
+                <input type="radio" name="execType" checked value="1">立即执行
+              </label>
+              <label>
+                <input type="radio" name="execType" value="2">延迟执行
+              </label>
+            </div>
+          </div>  
+        </div> 
+        <div class="form-group start">
+          <label class="col-sm-2 control-label">开始时间:</label>
+          <div class="col-sm-4">
+            <div class="radio">
+              <label>
+                <input type="radio" name="startCountType" checked="checked" value="1">绝对时间
+              </label>
+              <label>
+                <input type="radio" name="startCountType" value="2">相对时间
+              </label>
+            </div>
+          </div>
+        </div>  
+        <div class="form-group start">  
+          <div class="col-sm-offset-2">
+            <div class="startYearView" style="display:inline-block">
+              <input size="13" type="text" readonly class="form_datetime" id="startTime" datepicker><span style="font-weight:bold">:</span>
+            </div>
+            <input type="number"  min="0" max="59" id="startSec">秒
+          </div>
+        </div> 
+         
+        <div class="form-group">
+          <label class="col-sm-2 control-label">结束时间:</label>
+          <div class="col-sm-4">
+            <div class="radio">
+              <label>
+                <input type="radio" name="endCountType" checked="checked" value="1">绝对时间
+              </label>
+              <label>
+                <input type="radio" name="endCountType" value="2">相对时间
+              </label>
+            </div>
+          </div>
+        </div>   
+        <div class="form-group">
+          <div class="col-sm-offset-2">
+            <div class="endYearView" style="display:inline-block">
+              <input size="13" type="text" readonly class="form_datetime" id="endTime" datepicker><span style="font-weight:bold">:</span>
+            </div>
+            <input type="number"  min="0" max="59" id="endSec">秒
+          </div>
+        </div> 
+        <div class="form-group">
+          <label class="col-sm-2 control-label">任务描述:</label>
+          <div class="col-sm-offset-2">
+            <textarea rows="3" cols="30" id="desc"></textarea>
+          </div>     
+        </div>                    
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>
+        <button type="button" class="btn btn-primary" id="newTask">新建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="geneModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">新建生成任务</h4>
+      </div>
+      <div class="modal-body form-horizontal">
+       <div class="form-group">
+           <label class="col-sm-2 control-label">任务名称<span style="color:red;font-size:15px">*</span>:</label>
+           <div class="col-sm-4">
+             <input type="text" id="geneTaskName">
+           </div>     
+         </div>
           <div class="form-group">
             <label class="col-sm-2 control-label">选择方式:</label>
             <div class="col-sm-4">
               <div class="radio">
-                <label>
+                <!-- <label>
                   <input type="radio" name="machineType" checked="checked" value="1">捕获报文
-                </label>
-                <label>
-                  <input type="radio" name="machineType" value="2">产生报文
-                </label>
+                </label> -->
+               <label>
+                 <input type="radio" name="geneMachineType" value="2" checked>生成报文
+               </label>
                 
               </div>
               
@@ -50,8 +162,8 @@
           <div class="form-group">
             <label class="col-sm-2 control-label">选择机器:</label>
             <div class="col-sm-4">
-              <select class="form-control" style="width:" id="machineList">
-                <option  ng-repeat="data in machines" value="{{data.id}}">
+              <select class="form-control" style="width:" id="geneMachineList">
+                <option  ng-repeat="data in genemachines" value="{{data.id}}">
                   {{data.name}}
                 </option>
               </select>
@@ -62,64 +174,39 @@
             <div class="col-sm-4">
               <div class="radio">
                 <label>
-                  <input type="radio" name="execType" checked value="1">立即执行
+                  <input type="radio" name="geneExecType"  value="1">立即执行
                 </label>
                 <label>
-                  <input type="radio" name="execType" value="2">延迟执行
+                  <input type="radio" name="geneExecType" checked value="2">延迟执行
                 </label>
               </div>
             </div>  
           </div> 
-          <div class="form-group start">
+          <div class="form-group geneStart">
             <label class="col-sm-2 control-label">开始时间:</label>
             <div class="col-sm-4">
               <div class="radio">
                 <label>
-                  <input type="radio" name="startCountType" checked="checked" value="1">绝对时间
+                  <input type="radio" name="geneStartCountType" checked="checked" value="1">绝对时间
                 </label>
                 <label>
-                  <input type="radio" name="startCountType" value="2">相对时间
+                  <input type="radio" name="geneStartCountType" value="2">相对时间
                 </label>
               </div>
             </div>
           </div>  
-          <div class="form-group start">  
+          <div class="form-group geneStart">  
             <div class="col-sm-offset-2">
-              <div class="startYearView" style="display:inline-block">
-                <input size="13" type="text" readonly class="form_datetime" id="startTime" datepicker><span style="font-weight:bold">:</span>
+              <div class="geneStartYearView" style="display:inline-block">
+                <input size="13" type="text" readonly class="form_datetime" id="geneStartTime" datepicker><span style="font-weight:bold">:</span>
               </div>
-              <input type="number"  min="0" max="59" id="startSec">秒
+              <input type="number"  min="0" max="59" id="geneStartSec">秒
             </div>
-          </div> 
-           
-          <div class="form-group">
-            <label class="col-sm-2 control-label">结束时间:</label>
-            <div class="col-sm-4">
-              <div class="radio">
-                <label>
-                  <input type="radio" name="endCountType" checked="checked" value="1">绝对时间
-                </label>
-                <label>
-                  <input type="radio" name="endCountType" value="2">相对时间
-                </label>
-              </div>
-            </div>
-          </div>   
-          <div class="form-group">
-            <div class="col-sm-offset-2">
-              <div class="endYearView" style="display:inline-block">
-                <input size="13" type="text" readonly class="form_datetime" id="endTime" datepicker><span style="font-weight:bold">:</span>
-              </div>
-              <input type="number"  min="0" max="59" id="endSec">秒
-            </div>
-          </div>  
-            
-            
-                     
+          </div>                     
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>
-        <button type="button" class="btn btn-primary" id="newTask">新建</button>
+        <button type="button" class="btn btn-primary" id="geneNewTask">新建</button>
       </div>
     </div>
   </div>
