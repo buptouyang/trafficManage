@@ -65,14 +65,14 @@ app.post('/trafficDetail', function(req, res,next){
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
     case '3':queryExpression +=" sum(tuple_num) as sumData";break;
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
-    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';  
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
-  if(queryObj.netPro != '' && queryObj.netPro != '99'){
+  if(queryObj.netPro != '' && queryObj.netPro != '2'){
     queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   }
   if(type != 5){
@@ -166,7 +166,7 @@ app.get('/exceldata', function(req, res,next){
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
     case '3':queryExpression +=" sum(tuple_num) as sumData";break;
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
-    case '5':queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start,10):'';
@@ -237,37 +237,42 @@ app.get('/exceldata', function(req, res,next){
                     width:60
                 },
                 {
-                    caption:'40字节~80字节',  
+                    caption:'1字节~53字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'81~160字节',  
+                    caption:'54~79字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'161字节~320字节',  
+                    caption:'80字节~159字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'321字节~640字节',  
+                    caption:'160字节~319字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'641字节~1280字节',  
+                    caption:'320字节~639字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'1281字节~1500字节',  
+                    caption:'640字节~1279字节',  
                     type:'number',
                     width:20
                 },
                 {
-                    caption:'1501字节以上',  
+                    caption:'1280字节~1518字节',  
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'1519字节以上',  
                     type:'number',
                     width:20
                 }];
@@ -367,19 +372,39 @@ app.get('/netInfo', function(req, res,next){
     }
   });
 });
+app.get('/test', function(req, res,next){
+ /*var aaa='select max(c_time),66,1,1433166512,"xcvxc","依赖于流量：traffic",0 from capture_traffic where t_id = 66';
+  db.query(aaa,function(err,results){
+    console.log(err);
+    console.log(results)
+  });*/
+ db.query('select max(c_time) as end from capture_traffic where t_id = 74',function(err,results){
+    if(results[0].end == null){
+      console.log('success')
+    }
+  });
+});
 app.get('/trafficInfo', function(req, res,next){
   console.log(req.query);
   var page = req.query.page;
   if(req.query.queryStr == ''){
-    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    /*var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
     queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
-    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC";*/
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,1 as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
+    queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,2 as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(g.g_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC"
   }else{
-    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+   /* var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
     queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
-    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC";*/
+    var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,1 as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
+    queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,2 as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(g.g_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC"
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
@@ -494,7 +519,7 @@ app.post('/trafficAll', function(req, res,next){
     case 2:queryExpression +=" sum(pkt_num) as sumData";break;
     case 3:queryExpression +=" sum(tuple_num) as sumData";break;
     case 4:queryExpression +=" sum(frag_num) as sumData";break;
-    case 5:queryExpression +=" sum(size_40_80) as 40byte_80byte,sum(size_81_160) as 81byte_160byte,sum(size_161_320) as 161byte_320byte,sum(size_321_640) as 321byte_640byte,sum(size_641_1280) as 641byte_1280byte,sum(size_1281_1500) as 1281byte_1500byte,sum(size_1501) as 1501byte_above";break;
+    case 5:queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
   if(type != 5){
@@ -504,7 +529,7 @@ app.post('/trafficAll', function(req, res,next){
   db.query(queryExpression,function(err,results){
       if(err) return next(err);
         if(!results[0]){ //无查询结果
-          var message={'status':1,'message':"无查询结果"};
+          var message={'status':2,'message':"无查询结果"};
           var str =  JSON.stringify(message);
           res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
           res.end(str);
@@ -603,16 +628,17 @@ app.post('/newTask', function(req, res,next){
   }
   if(queryObj.endTimeType == '1'){//绝对时间
     if(queryObj.end < start){
-      end = start - queryObj.end;
+      end = start;
       start = queryObj.end;
     }else{
-      end = queryObj.end - start;
+      end = queryObj.end;
     }    
   }else{ //相对时间
-    end = queryObj.end;
+    end = start + queryObj.end;
   }
-  var queryExpression = 'insert into traffic_info(m_id,t_name,t_type,t_start,t_end,t_desc,t_run_flag) values('+queryObj.machine+',"'+queryObj.name+'",'+queryObj.type+','+start+',';
-  queryExpression+=end+',"'+queryObj.desc+'",0)';
+  queryObj.period=queryObj.period?queryObj.period:1;
+  var queryExpression = 'insert into traffic_info(m_id,t_name,t_type,t_start,t_end,t_desc,t_run_flag,t_period) values('+queryObj.machine+',"'+queryObj.name+'",'+queryObj.type+','+start+',';
+  queryExpression+=end+',"'+queryObj.desc+'",0,'+queryObj.period+')';
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     if(err){
@@ -662,21 +688,31 @@ app.post('/geneTraffic', function(req, res,next){
       start = UTCDay(new Date()) + parseInt(queryObj.start);
     }
   }
-  var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'",'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id;
-  console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-    if(err){
-      console.log('生成出错:'+err.message);
-      var data={'status':1,message:'生成出错'};
+  db.query('select max(c_time) as end from capture_traffic where t_id = '+queryObj.id,function(err,results){
+    if(results[0].end == null){
+      console.log('生成出错');
+      var data={'status':1,message:'生成出错，请等待捕获完成'};
       var str =  JSON.stringify(data); 
       res.end(str);
       return next(err);
-    } else{
-      var data={'status':0,dataList:[]};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }  
-  })
+    }else{
+      var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'","'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id;
+      console.log(queryExpression);
+      db.query(queryExpression,function(err,results){
+        if(err){
+          console.log('生成出错:'+err.message);
+          var data={'status':1,message:'生成出错'};
+          var str =  JSON.stringify(data); 
+          res.end(str);
+          return next(err);
+        } else{
+          var data={'status':0,dataList:[]};
+          var str =  JSON.stringify(data); 
+          res.end(str);
+        }  
+      });
+    }
+  });
 });
 app.post('/machineAll', function(req, res,next){
   var queryExpression = 'select m_id as id,m_name as name,m_capture_flag as cap,m_generate_flag as gene,m_valid_flag as valid from machine_info order by m_id DESC';

@@ -41,6 +41,7 @@ routeApp.factory('trafficInfo',function(){
 routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	$scope.taskInfo = {};
 	$scope.geneTaskInfo = {};
+	$scope.period = 1;
 	$scope.searchClick=function(e){
 		var parentEle = $(e.target).parent();
 		trafficInfo.trafficName = parentEle.siblings()[1].innerHTML;
@@ -51,7 +52,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		$.cookie('mstartTime', trafficInfo.mstartTime, { expires: 7 });
 		$.cookie('mendTime', trafficInfo.mendTime, { expires: 7 });
 		$.cookie('mid', trafficInfo.mid, { expires: 7 }); 
-		console.log($.cookie())
+		console.log($.cookie());
 	}
 
 	 
@@ -124,7 +125,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				var statusArray = ['准备运行','正在运行','结束运行'];
 				if(data.status==0 && data.dataList){
 					$.each(data.dataList,function(index,item){
-						item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+						//item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
 						item.status = statusArray[item.status];
 						item.descript = item.descript?unescape(item.descript):'';
 					});
@@ -202,6 +203,15 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 		}else{
 			$scope.taskInfo.end = endSec;
 		}
+		var period = Math.round($("#period").val());
+		if(period && period >=1){
+			$scope.taskInfo.period = period;
+			$scope.period = period;
+		}else{
+			$scope.taskInfo.period = 1;
+			$scope.period = 1;
+		}
+		
 		if(name != ''){
 			$scope.taskInfo.name = name;
 			if($scope.taskInfo.start < $scope.taskInfo.end){
@@ -278,20 +288,25 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	});*/
 
 	$('#newModal').on('show.bs.modal', function (event) {
-		$("#newModal input[type='radio']").trigger('change');
-	  $.ajax({
-		url:'/machineFunc',
-		type:'POST',
-		data:{type:1},
-		dataType:'json',
-		success:function(data){
-			if(data.status==0 && data.dataList){
-				$scope.$apply(function(){
-					$scope.machines = data.dataList;
-				});
-			}
-		}
-	  });	
+		//event.stopPropagation(); 
+		if(event.target.id == 'endTime' || event.target.id == 'startTime'){
+
+		}else{
+			$("#newModal input[type='radio']").trigger('change');
+			$.ajax({
+				url:'/machineFunc',
+				type:'POST',
+				data:{type:1},
+				dataType:'json',
+				success:function(data){
+					if(data.status==0 && data.dataList){
+						$scope.$apply(function(){
+							$scope.machines = data.dataList;
+						});
+					}
+				}
+			});
+		}			
 	});
 	$('#geneModal').on('show.bs.modal', function (event) {
 		$("#geneModal input[type='radio']").trigger('change');
@@ -429,7 +444,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	});
 	$("#netPro").change(function(e){
 		var id = $("#netPro").val();
-		if(id == '' || id == '99'){
+		if(id == '' || id == '2'){
 			$scope.transDis = true;
 		}else{
 			$scope.transDis = false;
@@ -457,30 +472,46 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	x?option.xAxis[0].data = x:'';	
     	series?option.series.push(series):'';
     }
-    function addOption(option,legend,x,series){
+    function addOption(option,legend,x,series,type){
     	if(legend){
     		$.each(legend,function(index,item){
 	    		option.legend.data.push(item);
 	    	}); 
     	}
     	var opLen,sLen;
-    	opLen=option.series[0].data.length;
-    	sLen=series.data.length
+    	opLen=option.series[0].data.length; //原数据
+    	sLen=series.data.length; //series 需要添加的数据
     	if(sLen>opLen){
     		//x坐标
     		for(var i=0;i<sLen-opLen;i++){
 				option.xAxis[0].data.push('');
 			}
 			//数据
-			$.each(option.series,function(index,item){
-				for(var i=0;i<sLen-opLen;i++){
-					item.data.push(0);						
-				}	    		
-	    	}); 
-    	}else{
-    		for(var i=0;i<opLen-sLen;i++){
-				series.data.push('');
-			}   		
+			if(type =='normal'){
+				$.each(option.series,function(index,item){
+					for(var i=0;i<sLen-opLen;i++){
+						item.data.push(0);						
+					}	    		
+		    	}); 
+			}else if(type =='total'){  //改原数据
+				$.each(option.series,function(index,item){
+					for(var i=0;i<sLen-opLen;i++){
+						item.data.push(item.data[opLen-1]);						
+					}	    		
+		    	});
+			}
+			
+    	}else{ //修改新加数据
+    		if(type =='normal'){
+				for(var i=0;i<opLen-sLen;i++){
+					series.data.push(0);
+				} 
+			}else if(type =='total'){  //改原数据
+				for(var i=0;i<opLen-sLen;i++){
+					series.data.push(series.data[series.data.length-1]);
+				} 
+			}
+    		  		
     	}
 		option.series.push(series);
 /*		if(option.xAxis){
@@ -762,7 +793,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
 				});
 				lineSeries.data = valueData;
-				if(type == '4'){
+				if(type == '4' || type =='3' || type =='2'){
 					option_line.yAxis[0].axisLabel.formatter = '{value}';
 				}else{
 					option_line.yAxis[0].axisLabel.formatter =  function(value){
@@ -852,7 +883,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						$scope.comCkListdata.push(obj);
 						$scope.$apply();
 						if(type == '5'){
-							
 							var outRadius = $scope.radius+20;
 							$scope.radius += 50;
 							var series = 
@@ -872,7 +902,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    							}			
 	    						}			
 							});	
-							addOption(option_pie,'','',series);
+							addOption(option_pie,'','',series,'normal');
 	    					//console.log(option_pie);
 	    					//myChart?myChart.clear():'';
 							myChart.setOption(option_pie);
@@ -886,9 +916,16 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 							series.name = obj.name;
 							series.type = 'line';
 							series.data = dataValue;
-							addOption(option_line,[obj.name],timeValue,series);
+							if(totalBoolean){
+								addOption(option_line,[obj.name],timeValue,series,'total');
+							}else{
+								addOption(option_line,[obj.name],timeValue,series,'normal');
+							}
+							
 							myChart.setOption(option_line);
 						}	
+					}else if(data.status==2){
+						myChart.setOption(option_line);
 					}
 				}
 			});
