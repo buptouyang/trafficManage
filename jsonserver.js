@@ -372,18 +372,13 @@ app.get('/netInfo', function(req, res,next){
     }
   });
 });
-app.get('/test', function(req, res,next){
- /*var aaa='select max(c_time),66,1,1433166512,"xcvxc","依赖于流量：traffic",0 from capture_traffic where t_id = 66';
-  db.query(aaa,function(err,results){
-    console.log(err);
-    console.log(results)
-  });*/
+/*app.get('/test', function(req, res,next){
  db.query('select max(c_time) as end from capture_traffic where t_id = 74',function(err,results){
     if(results[0].end == null){
       console.log('success')
     }
   });
-});
+});*/
 app.get('/trafficInfo', function(req, res,next){
   console.log(req.query);
   var page = req.query.page;
@@ -658,8 +653,12 @@ app.post('/newTask', function(req, res,next){
 });
 //结束任务
 app.post('/stopTask', function(req, res,next){
-  var id = req.body.id;
-  var queryExpression = 'update traffic_info set t_run_flag=2 where t_id='+id;
+  var id = req.body.id,queryExpression;
+  if(req.body.type == '2'){
+    queryExpression = 'update traffic_info set t_run_flag=2 where t_id='+id;
+  }else if(req.body.type == '1'){
+    queryExpression = 'update generate_traffic_info set g_run_flag=2 where t_id='+id;
+  }  
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     if(err){
@@ -688,6 +687,23 @@ app.post('/geneTraffic', function(req, res,next){
       start = UTCDay(new Date()) + parseInt(queryObj.start);
     }
   }
+ /* var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'","'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id+' and max(c_time) is not null';
+      console.log(queryExpression);
+
+      db.query(queryExpression,function(err,results){
+         console.log(results);
+        if(err){
+          console.log('生成出错:'+err.message);
+          var data={'status':1,message:'生成出错'};
+          var str =  JSON.stringify(data); 
+          res.end(str);
+          return next(err);
+        } else{
+          var data={'status':0,dataList:[]};
+          var str =  JSON.stringify(data); 
+          res.end(str);
+        }  
+      });*/
   db.query('select max(c_time) as end from capture_traffic where t_id = '+queryObj.id,function(err,results){
     if(results[0].end == null){
       console.log('生成出错');

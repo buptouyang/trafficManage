@@ -83,10 +83,18 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	$scope.stopClick=function(e){
 		var parentEle = $(e.target).parent();
 		var id = parentEle.siblings()[8].value;
+		var type;
+		var typeArray={'生成':1,'捕获':2};
+		$scope.infos.forEach(function(item,index) {
+			if(item.id == id){
+				type = typeArray[item.type]; 
+				return false;
+			}
+		});
 		$.ajax({
 			url:'/stopTask',
 			type:'POST',
-			data:{id:id},
+			data:{id:id,type:type},
 			dataType:'json',
 			success:function(data){
 				if(data.status==1){
@@ -97,8 +105,10 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 						if(item.id == id){
 							item.status = '结束运行'; 
 							item.disable = 'true';
+							return false;
 						}
 					});
+					$scope.$apply()
 					//$(parentEle.siblings()[3]).text('结束运行');
 				}
 			}
