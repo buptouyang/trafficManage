@@ -635,11 +635,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
     	var totalBoolean = $('#totalUp').prop('checked');
-    	if(totalBoolean == 'true'){
+    	/*if(totalBoolean == 'true'){
     		timeScale = 1;
     	}else{
     		timeScale = $('#timeScale').val() || 1;
-    	}
+    	}*/
+    	timeScale = $('#timeScale').val() || 1;
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTime;
@@ -671,7 +672,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())-UTCDay($scope.mstartTime):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
-    	var timeScale = $('#timeScale').val() || 1;
+    	var timeScale = parseInt($('#timeScale').val()) || 1;
     	var port = $("#portId").val();
     	var transPro = $('#transPro').val();
     	var netPro = $("#netPro").val();
@@ -687,7 +688,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     		startTime=endTime;
     		endTime=temp;
     	}
-    	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean);
+    	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean+"&scale="+timeScale);
 	});
     $('#searchNum').click(function(){
     	myChart?myChart.clear():'';
@@ -741,7 +742,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             data:[]
         }
         
-        search(function(data,type,total){
+        search(function(data,type,totalBoolean){
 			var lengendData = [];
 			var valueData = [];	
 			var timeData = [];
@@ -749,13 +750,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			$scope.lenArray[0].len = data.dataList.length;
 			$scope.$apply();
 			//
-/*			var i=-1;
+/*			var i=0;
 			var num = 0;
 			var value = [];
 			var total = 0;
 			var scale = $('#timeScale').val() || 1;
 			var results = data.dataList;
-			results.forEach(function(item,index) {
+				results.forEach(function(item,index) {
               if(index%scale){
                 num++;
                 total += parseInt(item.sumData,10);
@@ -778,6 +779,29 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             });
             console.log(value)*/
             //
+            /*results.forEach(function(item,index) {
+            	debugger
+                  console.log(index)
+                  if((index+1)%scale){
+                    num++;
+                    total += parseInt(item.sumData,10);
+                    if(index==results.length-1){
+                      value[i]={};
+                      value[i].sumData=total/num;
+                      value[i].time = item.time;
+                    }
+                  }else{
+                   	num++;
+                   	total += parseInt(item.sumData,10);
+                      value[i]={};
+                      value[i].sumData=total/num;
+                      value[i].time = results[index-1].time;
+                   
+                    total = 0;//parseInt(item.sumData,10);                
+                    i++;
+                    num=0;
+                  }
+                });*/
 			if(type == '5'){   	
 				$.each(data.dataList,function(index,item){
 			  		for(name in item){
@@ -810,7 +834,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
                     	return Math.round(value/1024);
                     };
 				}
-				if(total){
+				if(totalBoolean){
 					option_line.title.subtext='总量:'+data.dataList[data.dataList.length-1].sumData;
 				}else{
 					option_line.title.subtext='';
@@ -1090,14 +1114,14 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
 		$scope.$apply();
 	});
-	$("#totalUp").change(function(e){
-    	var totalBoolean = $('#totalUp').prop('checked');
+	$("#totalUp").change(function(e){  //勾选total时是否要时间比例
+    	/*var totalBoolean = $('#totalUp').prop('checked');
 		if(totalBoolean==true){
 			$scope.scaleDis = true;
 		}else{
 			$scope.scaleDis = false;
 		}
-		$scope.$apply();
+		$scope.$apply();*/
 	});
 /*	$("#totalUp").change(function(e){
 		var sdata = JSON.parse(localStorage.getItem('searchData'));

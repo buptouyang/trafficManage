@@ -59,7 +59,7 @@ app.post('/trafficDetail', function(req, res,next){
   var queryExpression = 'select';
   var queryObj = req.body;
   var type = queryObj.ctype;
-  var scale = queryObj.scale >= 1 ? queryObj.scale:1;
+  var scale = queryObj.scale >= 1 ? parseInt(queryObj.scale):1;
   switch(type){
     case '1':queryExpression +=" sum(traffic_size) as sumData";break;
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
@@ -90,43 +90,38 @@ app.post('/trafficDetail', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:[]};
             var tempValue=0;
-           // console.log(results);            
-           /* results.forEach(function(item,index) {
-              if(index%scale){
-                num++;
-                total += parseInt(results[index].sumData,10);
-                if(index==results.length-1){
-                  value[i].sumData=total/num;
-                  value[i].time = item.time;
-                }
-              }else{
-
-                if(i>=0){ 
-                  value[i].sumData=total/num;
-                  value[i].time = item.time;
-                }
-                total = parseInt(item.sumData,10);
-                 
-                i++;
-                num=1;
-              }
-            });*/
-            if(queryObj.total == 'true'){
+            if(queryObj.total == 'true'){    //流量
+              var pointValue = [];
               results.forEach(function(item,index) {
                 var totalvalue = {};
                 tempValue+=parseInt(item.sumData,10);
                 totalvalue.time = item.time;
-                totalvalue.sumData = tempValue
-                data.dataList.push(totalvalue);
+                totalvalue.sumData = tempValue;
+                pointValue.push(totalvalue);
+                //data.dataList.push(totalvalue);
               });
+              //console.log(pointValue);
+              var searchPointLen = pointValue.length;
+              if(scale>searchPointLen){
+                data.dataList.push(pointValue[searchPointLen-1]);
+              }else{
+                for(var k=(scale-1);k<searchPointLen;k+=scale){
+                  console.log(k)
+                  if(k>searchPointLen){
+                    data.dataList.push(pointValue[searchPointLen-1]);
+                  }else{
+                    data.dataList.push(pointValue[k]);
+                  }      
+                }
+              }              
             }else{
               if(scale != 1){
                 var value = new Array();
-                var i=-1;
-                var num = 1;
+                var i=0;
+                var num = 0;
                 var total = 0;
                 results.forEach(function(item,index) {
-                  if(index%scale){
+                  if((index+1)%scale){
                     num++;
                     total += parseInt(item.sumData,10);
                     if(index==results.length-1){
@@ -135,19 +130,19 @@ app.post('/trafficDetail', function(req, res,next){
                       value[i].time = item.time;
                     }
                   }else{
-                    if(i>=0){ 
-                      value[i]={};
-                      value[i].sumData=total/num;
-                      value[i].time = results[index-1].time;
-                    }
-                    total = parseInt(item.sumData,10);                
+                    num++;
+                    total += parseInt(item.sumData,10);
+                    value[i]={};
+                    value[i].sumData=total/num;
+                    value[i].time = item.time;
+                    total = 0;//parseInt(item.sumData,10);                
                     i++;
-                    num=1;
+                    num=0;
                   }
                 });
                 data.dataList = value;
-                console.log(value)
               }else{
+                console.log(results)
                 data.dataList=results;
               }             
             }            
@@ -161,6 +156,7 @@ app.get('/exceldata', function(req, res,next){
   var queryExpression = 'select';
   var queryObj = req.query;
   var type = queryObj.ctype;
+  var scale = parseInt(queryObj.scale);
   switch(type){
     case '1':queryExpression +=" sum(traffic_size) as sumData";break;
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
@@ -279,22 +275,77 @@ app.get('/exceldata', function(req, res,next){
               }else{
                 if(queryObj.total == 'true'){
                   var tempValue = 0;
-                  results.forEach(function(item,index) {
+                  /*results.forEach(function(item,index) {
                     var totalvalue = {};
                     tempValue+=parseInt(item.sumData,10);
                     totalvalue.time = item.time;
                     totalvalue.sumData = tempValue
                     results[index]=totalvalue;
+                  });*/
+                  var pointValue = [];
+                  results.forEach(function(item,index) {
+                    var totalvalue = {};
+                    tempValue+=parseInt(item.sumData,10);
+                    totalvalue.time = item.time;
+                    totalvalue.sumData = tempValue;
+                    pointValue.push(totalvalue);
+                    //data.dataList.push(totalvalue);
                   });
+                  var pointLen = pointValue.length;
+                  var scaleValue = [];
+                  if(scale>pointValue){
+                    scaleValue.push(pointValue[pointLen-1]);
+                  }else{
+                    for(var k=(scale-1);k<pointLen;k+=scale){
+                      console.log(k)
+                      if(k>pointLen){
+                        scaleValue.push(pointValue[pointLen-1]);
+                      }else{
+                        scaleValue.push(pointValue[k]);
+                      }      
+                    }
+                  }
+                  scaleValue.forEach(function(item, index){
+                    var rowdata =new Array();    
+                    rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
+                    rowdata.push(item.sumData);
+                    confrowdata.push(rowdata);
+                  }); 
                 }else{
                   //data.dataList=results;
+                  var value = new Array();
+                  var i=0;
+                  var num = 0;
+                  var total = 0;
+                  results.forEach(function(item,index) {
+                    if((index+1)%scale){
+                      num++;
+                      total += parseInt(item.sumData,10);
+                      if(index==results.length-1){
+                        value[i]={};
+                        value[i].sumData=total/num;
+                        value[i].time = item.time;
+                      }
+                    }else{
+                      num++;
+                      total += parseInt(item.sumData,10);
+                      value[i]={};
+                      value[i].sumData=total/num;
+                      value[i].time = results[index].time;
+                      total = 0;//parseInt(item.sumData,10);                
+                      i++;
+                      num=0;
+                    }
+                  });
+                  console.log(value)
+                  value.forEach(function(item, index){
+                    var rowdata =new Array();    
+                    rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
+                    rowdata.push(item.sumData);
+                    confrowdata.push(rowdata);
+                  });
                 } 
-                results.forEach(function(item, index){
-                  var rowdata =new Array();    
-                  rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
-                  rowdata.push(item.sumData);
-                  confrowdata.push(rowdata);
-                }); 
+                 
                 conf.rows = confrowdata;
                 conf.cols = [{
                   caption:'时刻',   
@@ -397,9 +448,9 @@ app.get('/trafficInfo', function(req, res,next){
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
     queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC";*/
     var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,1 as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
+    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like'%"+req.query.queryStr+"%' group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,2 as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(g.g_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC"
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC"
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
