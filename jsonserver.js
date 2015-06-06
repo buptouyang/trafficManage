@@ -34,32 +34,36 @@ app.post('/login', function(req, res,next){
   var queryExpression="select * from user where user='"+req.body.uid+"'";
   db.query(queryExpression,function(err,results){
       if(err) return next(err);
-        if(!results[0]){
-          var message={'status':1,'message':"用户名不存在"};
-          var str =  JSON.stringify(message);
+      if(!results[0]){
+        var message={'status':1,'message':"用户名不存在"};
+        var str =  JSON.stringify(message);
+        res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+        res.end(str);
+      } else { 
+        if(results[0].psw == req.body.psw){
+          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+          var message={'status':0,'message':"登录成功"};
+          var str =  JSON.stringify(message); 
+          res.end(str);
+        } else {
+          var message={'status':2,'message':"密码错误"};
+          var str =  JSON.stringify(message); 
           res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
           res.end(str);
-        } else { 
-          if(results[0].psw == req.body.psw){
-            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            var message={'status':0,'message':"登录成功"};
-            var str =  JSON.stringify(message); 
-            res.end(str);
-          } else {
-            var message={'status':2,'message':"密码错误"};
-            var str =  JSON.stringify(message); 
-            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            res.end(str);
-          }
         }
+      }
   });
 });
+function toInteger(str) {
+  var res = parseInt(str, 10)
+  return isNaN(res) ? 1 : res;
+}
 app.post('/trafficDetail', function(req, res,next){
   console.log(req.body);
   var queryExpression = 'select';
   var queryObj = req.body;
   var type = queryObj.ctype;
-  var scale = queryObj.scale >= 1 ? parseInt(queryObj.scale):1;
+  var scale = queryObj.scale >= 1 ? toInteger(queryObj.scale):1;
   switch(type){
     case '1':queryExpression +=" sum(traffic_size) as sumData";break;
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
@@ -67,7 +71,7 @@ app.post('/trafficDetail', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
-  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
+  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
   queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';  
@@ -90,24 +94,21 @@ app.post('/trafficDetail', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:[]};
             var tempValue=0;
-            if(queryObj.total == 'true'){    //流量
+            if(queryObj.total == 'true'){    //累积
               var pointValue = [];
               results.forEach(function(item,index) {
                 var totalvalue = {};
-                tempValue+=parseInt(item.sumData,10);
+                tempValue += toInteger(item.sumData);
                 totalvalue.time = item.time;
                 totalvalue.sumData = tempValue;
                 pointValue.push(totalvalue);
-                //data.dataList.push(totalvalue);
               });
-              //console.log(pointValue);
               var searchPointLen = pointValue.length;
-              if(scale>searchPointLen){
+              if(scale > searchPointLen){  //时间尺度
                 data.dataList.push(pointValue[searchPointLen-1]);
               }else{
                 for(var k=(scale-1);k<searchPointLen;k+=scale){
-                  console.log(k)
-                  if(k>searchPointLen){
+                  if(k > searchPointLen){
                     data.dataList.push(pointValue[searchPointLen-1]);
                   }else{
                     data.dataList.push(pointValue[k]);
@@ -123,7 +124,7 @@ app.post('/trafficDetail', function(req, res,next){
                 results.forEach(function(item,index) {
                   if((index+1)%scale){
                     num++;
-                    total += parseInt(item.sumData,10);
+                    total += toInteger(item.sumData);
                     if(index==results.length-1){
                       value[i]={};
                       value[i].sumData=total/num;
@@ -131,19 +132,18 @@ app.post('/trafficDetail', function(req, res,next){
                     }
                   }else{
                     num++;
-                    total += parseInt(item.sumData,10);
+                    total += toInteger(item.sumData,10);
                     value[i]={};
                     value[i].sumData=total/num;
                     value[i].time = item.time;
-                    total = 0;//parseInt(item.sumData,10);                
+                    total = 0;//toInteger(item.sumData,10);                
                     i++;
                     num=0;
                   }
                 });
                 data.dataList = value;
               }else{
-                console.log(results)
-                data.dataList=results;
+                data.dataList = results;
               }             
             }            
             var str =  JSON.stringify(data); 
@@ -151,12 +151,12 @@ app.post('/trafficDetail', function(req, res,next){
         }
     });   
 });
-app.get('/exceldata', function(req, res,next){
-  console.log(req.query);
+function searchData(reqparam,callback){
+  console.log(reqparam);
   var queryExpression = 'select';
-  var queryObj = req.query;
+  var queryObj = reqparam;
   var type = queryObj.ctype;
-  var scale = parseInt(queryObj.scale);
+  var scale = queryObj.scale >= 1 ? toInteger(queryObj.scale):1;
   switch(type){
     case '1':queryExpression +=" sum(traffic_size) as sumData";break;
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
@@ -164,229 +164,246 @@ app.get('/exceldata', function(req, res,next){
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
     case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
-  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;//"and t_start >"+req.body.start+" and t_end<"+req.body.end+
-  queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start,10):'';
-  queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end,10):'';
-  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
-  queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
+  queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
+  queryObj.end!='0'?(queryExpression+=" and c_time <="+queryObj.end):'';
+  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';  
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
+  if(queryObj.netPro != '' && queryObj.netPro != '2'){
+    queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  }
   if(type != 5){
     queryExpression +=" group by c_time";
   }
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    console.log(results);
-      if(err) return next(err);
-        if(!results[0]){ //无查询结果 
-            //var message={'status':1,'message':"无查询结果"};
-            var str = 'no data';
-            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            res.end(str);
-        } else {  //有结果
-            var wstart,wend;
-            db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
-              var formalTime = timeResults[0].t_start;
-              var tendTime = formalTime+timeResults[0].t_end;
-              var conf ={};
-              var confrowdata=new Array();
-              if(queryObj.start!=0 ){
-                wstart = NormalDate(formalTime+parseInt(queryObj.start,10)).replace(/[\/\:]/g,'-');
-              }else{
-                wstart = NormalDate(formalTime).replace(/[\/\:]/g,'-');
-              }
-              if(queryObj.end!=0){
-                wend = NormalDate(formalTime+parseInt(queryObj.end,10)).replace(/[\/\:]/g,'-');
-              }else{
-                wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
-              }    
+    callback(err,results);
+  });
+}
 
-              if(type == '5'){
-                var rowdata =new Array();
-                if(queryObj.start!=0 ){
-                  wstart = NormalDate(formalTime+parseInt(queryObj.start,10));
-                  rowdata.push(wstart);
-                }else{
-                  wstart = NormalDate(formalTime);
-                  rowdata.push(wstart);
-                }
-                if(queryObj.end!=0){
-                  wend = NormalDate(formalTime+parseInt(queryObj.end,10));
-                  rowdata.push(wend);
-                }else{
-                  wend = NormalDate(tendTime);
-                  rowdata.push(wend);
-                }
-                for(value in results[0]){
-                  if(value != 'time'){
-                    rowdata.push(results[0][value]); 
-                  }              
-                }
-                confrowdata.push(rowdata);
-                conf.rows = confrowdata;
-                conf.cols = [{
-                  caption:'开始时间',   
-                  type:'string',
-                  width:60
-                },{
-                    caption:'结束时间',
-                    type:'string',
-                    width:60
-                },
-                {
-                    caption:'1字节~53字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'54~79字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'80字节~159字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'160字节~319字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'320字节~639字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'640字节~1279字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'1280字节~1518字节',  
-                    type:'number',
-                    width:20
-                },
-                {
-                    caption:'1519字节以上',  
-                    type:'number',
-                    width:20
-                }];
-              }else{
-                if(queryObj.total == 'true'){
-                  var tempValue = 0;
-                  /*results.forEach(function(item,index) {
-                    var totalvalue = {};
-                    tempValue+=parseInt(item.sumData,10);
-                    totalvalue.time = item.time;
-                    totalvalue.sumData = tempValue
-                    results[index]=totalvalue;
-                  });*/
-                  var pointValue = [];
-                  results.forEach(function(item,index) {
-                    var totalvalue = {};
-                    tempValue+=parseInt(item.sumData,10);
-                    totalvalue.time = item.time;
-                    totalvalue.sumData = tempValue;
-                    pointValue.push(totalvalue);
-                    //data.dataList.push(totalvalue);
-                  });
-                  var pointLen = pointValue.length;
-                  var scaleValue = [];
-                  if(scale>pointValue){
-                    scaleValue.push(pointValue[pointLen-1]);
-                  }else{
-                    for(var k=(scale-1);k<pointLen;k+=scale){
-                      console.log(k)
-                      if(k>pointLen){
-                        scaleValue.push(pointValue[pointLen-1]);
-                      }else{
-                        scaleValue.push(pointValue[k]);
-                      }      
-                    }
-                  }
-                  scaleValue.forEach(function(item, index){
-                    var rowdata =new Array();    
-                    rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
-                    rowdata.push(item.sumData);
-                    confrowdata.push(rowdata);
-                  }); 
-                }else{
-                  //data.dataList=results;
-                  var value = new Array();
-                  var i=0;
-                  var num = 0;
-                  var total = 0;
-                  results.forEach(function(item,index) {
-                    if((index+1)%scale){
-                      num++;
-                      total += parseInt(item.sumData,10);
-                      if(index==results.length-1){
-                        value[i]={};
-                        value[i].sumData=total/num;
-                        value[i].time = item.time;
-                      }
-                    }else{
-                      num++;
-                      total += parseInt(item.sumData,10);
-                      value[i]={};
-                      value[i].sumData=total/num;
-                      value[i].time = results[index].time;
-                      total = 0;//parseInt(item.sumData,10);                
-                      i++;
-                      num=0;
-                    }
-                  });
-                  console.log(value)
-                  value.forEach(function(item, index){
-                    var rowdata =new Array();    
-                    rowdata.push(NormalDate(formalTime+parseInt(item.time,10)));
-                    rowdata.push(item.sumData);
-                    confrowdata.push(rowdata);
-                  });
-                } 
-                 
-                conf.rows = confrowdata;
-                conf.cols = [{
-                  caption:'时刻',   
-                  type:'string',
-                  width:60
-                  },/*{
-                      caption:'结束时间',
-                      type:'string',
-                      width:60
-                  },*//*{
-                      caption:'步长',
-                      type:'number',
-                      width:20
-                  },*/
-                  {
-                      caption:'数据',  
-                      type:'number',
-                      width:20
-                  }];
-              }//非饼状
-              var userAgent = (req.headers['user-agent']||'').toLowerCase();
- 
-              if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
-                  res.setHeader('Content-Disposition', 'attachment; filename=' + timeResults[0].t_name +'__' +encodeURIComponent(typeArray[type]) +wstart+"__"+wend+".xlsx");
-              } else if(userAgent.indexOf('firefox') >= 0) {
-                  res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[type])+wstart+'__'+wend+'.xlsx"');
-              } else {
-                  /* safari等其他非主流浏览器只能呵呵了 */
-                  res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(typeArray[type]).toString('binary')+wstart+"__"+wend+".xlsx");
-              }
-              console.log(wstart,wend,encodeURIComponent(typeArray[type]))
-              var result = nodeExcel.execute(conf);
-              res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-              res.setHeader('charset', 'GB2312');
-              //res.setHeader("Content-Disposition", "attachment; filename="+encodeURIComponent(typeArray[type])+wstart+"__"+wend+".xlsx");
-              res.end(result, 'binary');
+function isArrayFun(arr){
+  if( Object.prototype.toString.call(arr) === '[object Array]' ) {
+    return true;
+  }else{
+    return false;
+  }
+}
+
+function totalUp(arr){
+  if(isArrayFun){
+    var tempValue = 0,pointValue = [];
+    arr.forEach(function(item,index) {
+      var totalvalue = {};
+      tempValue+=toInteger(item.sumData);
+      totalvalue.time = item.time;
+      totalvalue.sumData = tempValue;
+      pointValue.push(totalvalue);
+    });
+    return pointValue;
+  }else{
+    return false;
+  }
+}
+function scaleUp(scale,arr,type){
+  var pointLen = arr.length;
+  var scaleValue = [];
+  if(parseInt(scale,10) == 1){
+    return arr;
+  }else{
+    if(type == 1){ //total
+      if(scale > pointLen){
+        scaleValue.push(arr[pointLen-1]);
+      }else{
+        for(var k=(scale-1);k<pointLen;k+=scale){
+          if(k>pointLen){
+            scaleValue.push(arr[pointLen-1]);
+          }else{
+            scaleValue.push(arr[k]);
+          }      
+        }
+      }
+    }else{
+      var i=0;
+      var num = 0;
+      var total = 0;
+      arr.forEach(function(item,index) {
+        if((index+1)%scale){
+          num++;
+          total += toInteger(item.sumData);
+          if(index==arr.length-1){
+            scaleValue[i]={};
+            scaleValue[i].sumData=total/num;
+            scaleValue[i].time = item.time;
+          }
+        }else{
+          num++;
+          total += toInteger(item.sumData,10);
+          scaleValue[i]={};
+          scaleValue[i].sumData=total/num;
+          scaleValue[i].time = item.time;
+          total = 0;//toInteger(item.sumData,10);                
+          i++;
+          num=0;
+        }
+      });
+    }   
+    return scaleValue;
+  }
+}
+app.get('/exceldata', function(req, res,next){
+  var queryObj = req.query;
+  searchData(queryObj,function(err,results){
+    if(err) return next(err);
+    if(!results[0]){ //无查询结果 
+        //var message={'status':1,'message':"无查询结果"};
+        var str = 'no data';
+        res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+        res.end(str);
+    } else {  //有结果
+      var wstart,wend;
+      db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
+        var formalTime = timeResults[0].t_start;
+        var tendTime = formalTime+timeResults[0].t_end;
+        var conf ={};
+        var confrowdata=new Array();
+        if(queryObj.start!=0 ){
+          wstart = NormalDate(formalTime+toInteger(queryObj.start)).replace(/[\/\:]/g,'-');
+        }else{
+          wstart = NormalDate(formalTime).replace(/[\/\:]/g,'-');
+        }
+        if(queryObj.end!=0){
+          wend = NormalDate(formalTime+toInteger(queryObj.end)).replace(/[\/\:]/g,'-');
+        }else{
+          wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
+        }
+        if(queryObj.ctype == '5'){   //包分布
+            var rowdata =new Array();
+            if(queryObj.start!=0 ){
+              wstart = NormalDate(formalTime+toInteger(queryObj.start));
+              rowdata.push(wstart);
+            }else{
+              wstart = NormalDate(formalTime);
+              rowdata.push(wstart);
+            }
+            if(queryObj.end!=0){
+              wend = NormalDate(formalTime+toInteger(queryObj.end));
+              rowdata.push(wend);
+            }else{
+              wend = NormalDate(tendTime);
+              rowdata.push(wend);
+            }
+            for(value in results[0]){
+              if(value != 'time'){
+                rowdata.push(results[0][value]); 
+              }              
+            }
+            confrowdata.push(rowdata);
+            conf.rows = confrowdata;
+            conf.cols = [{
+              caption:'开始时间',   
+              type:'string',
+              width:60
+            },{
+                caption:'结束时间',
+                type:'string',
+                width:60
+            },
+            {
+                caption:'1字节~53字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'54~79字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'80字节~159字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'160字节~319字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'320字节~639字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'640字节~1279字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'1280字节~1518字节',  
+                type:'number',
+                width:60
+            },
+            {
+                caption:'1519字节以上',  
+                type:'number',
+                width:60
+            }];
+          }else{  //其他线图
+            console.log(results);
+            if(queryObj.total == 'true'){
+              results = totalUp(results);
+              results = scaleUp(queryObj.scale,results);
+            }else{
+              results = scaleUp(queryObj.scale,results);
+            } 
+            console.log(results)
+            results.forEach(function(item, index){
+              var rowdata =new Array();    
+              rowdata.push(NormalDate(formalTime+toInteger(item.time)));
+              rowdata.push(item.sumData);
+              confrowdata.push(rowdata);
             });
-            
-          }//end of excel
-    });   
+            console.log(confrowdata)
+            conf.rows = confrowdata;
+            conf.cols = [{
+              caption:'时刻',   
+              type:'string',
+              width:60
+              },/*{
+                  caption:'结束时间',
+                  type:'string',
+                  width:60
+              },*//*{
+                  caption:'步长',
+                  type:'number',
+                  width:20
+              },*/
+              {
+                  caption:'数据',  
+                  type:'number',
+                  width:20
+            }];
+          }//非饼状
+          //解决中文乱码
+          var userAgent = (req.headers['user-agent']||'').toLowerCase();
+          if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
+              res.setHeader('Content-Disposition', 'attachment; filename=' + timeResults[0].t_name +'__' +encodeURIComponent(typeArray[queryObj.ctype]) +wstart+"__"+wend+".xlsx");
+          } else if(userAgent.indexOf('firefox') >= 0) {
+              res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[queryObj.ctype])+wstart+'__'+wend+'.xlsx"');
+          } else {
+              /* safari等其他非主流浏览器只能呵呵了 */
+              res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(typeArray[queryObj.ctype]).toString('binary')+wstart+"__"+wend+".xlsx");
+          }
+          var excelResult = nodeExcel.execute(conf);
+          res.setHeader('Content-Type', 'application/vnd.openxmlformats');
+          res.setHeader('charset', 'GB2312');
+          //res.setHeader("Content-Disposition", "attachment; filename="+encodeURIComponent(typeArray[type])+wstart+"__"+wend+".xlsx");
+          res.end(excelResult, 'binary');
+        });
+      }
+  });
 });
+
 //传输协议
 app.get('/transInfo', function(req, res,next){
   var id = req.query.id || null;
@@ -423,13 +440,7 @@ app.get('/netInfo', function(req, res,next){
     }
   });
 });
-/*app.get('/test', function(req, res,next){
- db.query('select max(c_time) as end from capture_traffic where t_id = 74',function(err,results){
-    if(results[0].end == null){
-      console.log('success')
-    }
-  });
-});*/
+
 app.get('/trafficInfo', function(req, res,next){
   console.log(req.query);
   var page = req.query.page;
@@ -456,35 +467,35 @@ app.get('/trafficInfo', function(req, res,next){
   db.query(queryExpression,function(err,results){
    console.log(results.length);
       if(err) return next(err);
-        if(!results[0]){ //无查询结果
-            var message={'status':1,'message':"无查询结果"};
-            var str =  JSON.stringify(message);
-            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            res.end(str);         
-        } else {  //有结果
-            var data={'status':0,dataList:[],totalPng:0};
-            results.forEach(function(item,index) {
-              if(item.end==null){
-                item.end = 0;
-              }
-              if(item.status == 2){
-                item.disable = true;
-              }else{
-                item.disable = false;
-              }
-              if(item.type == 2){
-                item.type = '生成';
-                item.cap = 'false';
-              }else{
-                item.type = '捕获';
-                item.cap = 'true';
-              }
-            });
-            data.totalPng = Math.ceil(results.length/10);
-            data.dataList=results.slice((page-1)*10,page*10);
-            var str =  JSON.stringify(data); 
-            res.end(str);
-        }
+      if(!results[0]){ //无查询结果
+          var message={'status':0,'message':"无查询结果",dataList:[]};
+          var str =  JSON.stringify(message);
+          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+          res.end(str);         
+      } else {  //有结果
+          var data={'status':0,dataList:[],totalPng:0};
+          results.forEach(function(item,index) {
+            if(item.end==null){
+              item.end = 0;
+            }
+            if(item.status == 2){
+              item.disable = true;
+            }else{
+              item.disable = false;
+            }
+            if(item.type == 2){
+              item.type = '生成';
+              item.cap = 'false';
+            }else{
+              item.type = '捕获';
+              item.cap = 'true';
+            }
+          });
+          data.totalPng = Math.ceil(results.length/10);
+          data.dataList=results.slice((page-1)*10,page*10);
+          var str =  JSON.stringify(data); 
+          res.end(str);
+      }
   });
 });
 app.get('/trafficCap', function(req, res,next){
@@ -525,7 +536,7 @@ app.get('/trafficCap', function(req, res,next){
 //实时流量
 app.post('/realTime', function(req, res,next){
   var queryExpression = 'select';
-  var type = parseInt(req.body.ctype,10);
+  var type = toInteger(req.body.ctype);
   var queryObj = req.body;
   console.log(queryObj);
   switch(type){
@@ -536,13 +547,14 @@ app.post('/realTime', function(req, res,next){
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
-  queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
   queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
+  if(queryObj.netPro != '' && queryObj.netPro != '2'){
+    queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  }
   queryExpression +=" group by c_time";
   queryExpression += ' order by c_time DESC limit 0,1000';
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
-    console.log(results);
       if(err) return next(err);
         if(!results[0]){ //无查询结果
             var message={'status':1,'message':"无查询结果"};
@@ -559,7 +571,7 @@ app.post('/realTime', function(req, res,next){
 });
 app.post('/trafficAll', function(req, res,next){
   var queryExpression = 'select';
-  var type = parseInt(req.body.type,10);
+  var type = toInteger(req.body.type);
   switch(type){
     case 1:queryExpression +=" sum(traffic_size) as sumData";break;
     case 2:queryExpression +=" sum(pkt_num) as sumData";break;
@@ -585,7 +597,7 @@ app.post('/trafficAll', function(req, res,next){
             if(req.body.total == 'true'){
               results.forEach(function(item,index) {
                 var totalvalue = {};
-                tempValue+=parseInt(item.sumData,10);
+                tempValue+=toInteger(item.sumData);
                 totalvalue.time = item.time;
                 totalvalue.sumData = tempValue
                 data.dataList.push(totalvalue);
@@ -660,8 +672,8 @@ app.post('/updateMachine', function(req, res,next){
 //新建任务
 app.post('/newTask', function(req, res,next){
   var queryObj = req.body;
-  queryObj.start = parseInt(queryObj.start,10);
-  queryObj.end = parseInt(queryObj.end,10);
+  queryObj.start = toInteger(queryObj.start);
+  queryObj.end = toInteger(queryObj.end);
   var start,end;
   if(queryObj.execType == '1'){ //立即执行
     start = UTCDay(new Date());
@@ -735,26 +747,9 @@ app.post('/geneTraffic', function(req, res,next){
     if(queryObj.startTimeType == '1'){//绝对时间
       start = queryObj.start;
     }else{
-      start = UTCDay(new Date()) + parseInt(queryObj.start);
+      start = UTCDay(new Date()) + toInteger(queryObj.start);
     }
   }
- /* var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'","'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id+' and max(c_time) is not null';
-      console.log(queryExpression);
-
-      db.query(queryExpression,function(err,results){
-         console.log(results);
-        if(err){
-          console.log('生成出错:'+err.message);
-          var data={'status':1,message:'生成出错'};
-          var str =  JSON.stringify(data); 
-          res.end(str);
-          return next(err);
-        } else{
-          var data={'status':0,dataList:[]};
-          var str =  JSON.stringify(data); 
-          res.end(str);
-        }  
-      });*/
   db.query('select max(c_time) as end from capture_traffic where t_id = '+queryObj.id,function(err,results){
     if(results[0].end == null){
       console.log('生成出错');
@@ -844,7 +839,7 @@ app.get('/search', function(req, res,next){
     {
      var databasesql= "select "+type+" from feature where time >="+req.query.start+" and time <="+req.query.end;
       db.query(databasesql,function(err,results){
-        var step = parseInt(req.query.step);
+        var step = toInteger(req.query.step);
         if(err) return next(err);
         if(!results) return res.send(404);
         if (req.query && req.query.callback) {
@@ -857,11 +852,11 @@ app.get('/search', function(req, res,next){
           results.forEach(function(item, index){            
               if(index%step){
                 num++;
-                value[i] += parseInt(item[type]);
+                value[i] += toInteger(item[type]);
                 if(index==results.length-1){value[i]=value[i]/num}
               }else{
                 i++;               
-                value[i] = parseInt(item[type]);
+                value[i] = toInteger(item[type]);
                 if(i-1>=0){value[i-1]=value[i-1]/num;} 
                 num=1;              
               }            
@@ -880,12 +875,12 @@ app.get('/search', function(req, res,next){
             if(err) return next(err);
             if(!results) return res.send(404);
             results.forEach(function(item,index){       
-              dataArray[0]+=parseInt(item.ftp_21);
-              dataArray[1]+=parseInt(item.telnet_23);
-              dataArray[2]+=parseInt(item.http_80);
-              dataArray[3]+=parseInt(item.smtp_25);
-              dataArray[4]+=parseInt(item.pop3_110);
-              dataArray[5]+=parseInt(item.elseport);
+              dataArray[0]+=toInteger(item.ftp_21);
+              dataArray[1]+=toInteger(item.telnet_23);
+              dataArray[2]+=toInteger(item.http_80);
+              dataArray[3]+=toInteger(item.smtp_25);
+              dataArray[4]+=toInteger(item.pop3_110);
+              dataArray[5]+=toInteger(item.elseport);
             });
             var str =  req.query.callback + '(' + JSON.stringify(dataArray) + ')';//jsonp  
             res.end(str);
@@ -900,16 +895,16 @@ app.get('/search', function(req, res,next){
         if(!results) return res.send(404);
         if (req.query && req.query.callback) {
           results.forEach(function(item,index){           
-            dataArray[0]+=parseInt(item.size_40);
-            dataArray[1]+=parseInt(item.size_41);
-            dataArray[2]+=parseInt(item.size_54);
-            dataArray[3]+=parseInt(item.size_55);
-            dataArray[4]+=parseInt(item.size_61);
-            dataArray[5]+=parseInt(item.size_101);
-            dataArray[6]+=parseInt(item.size_257);
-            dataArray[7]+=parseInt(item.size_513);
-            dataArray[8]+=parseInt(item.size_1025);
-            dataArray[9]+=parseInt(item.size_1500);
+            dataArray[0]+=toInteger(item.size_40);
+            dataArray[1]+=toInteger(item.size_41);
+            dataArray[2]+=toInteger(item.size_54);
+            dataArray[3]+=toInteger(item.size_55);
+            dataArray[4]+=toInteger(item.size_61);
+            dataArray[5]+=toInteger(item.size_101);
+            dataArray[6]+=toInteger(item.size_257);
+            dataArray[7]+=toInteger(item.size_513);
+            dataArray[8]+=toInteger(item.size_1025);
+            dataArray[9]+=toInteger(item.size_1500);
           });
           var str =  req.query.callback + '(' + JSON.stringify(dataArray) + ')';//jsonp  
           res.end(str);
@@ -925,8 +920,8 @@ app.get('/search', function(req, res,next){
   var conf ={};
   var confrowdata=new Array();
   var ptype = req.query.ptype;
-  var start = parseInt(req.query.start);
-  var end = parseInt(req.query.end);
+  var start = toInteger(req.query.start);
+  var end = toInteger(req.query.end);
   // uncomment it for style example  
   // conf.stylesXmlFile = "styles.xml";
   switch (req.query.ptype){
@@ -936,16 +931,16 @@ app.get('/search', function(req, res,next){
         if(err) return next(err);
         if(!results) return res.send(404);
         results.forEach(function(item,index){       
-          dataArray[0]+=parseInt(item.size_40);
-          dataArray[1]+=parseInt(item.size_41);
-          dataArray[2]+=parseInt(item.size_54);
-          dataArray[3]+=parseInt(item.size_55);
-          dataArray[4]+=parseInt(item.size_61);
-          dataArray[5]+=parseInt(item.size_101);
-          dataArray[6]+=parseInt(item.size_257);
-          dataArray[7]+=parseInt(item.size_513);
-          dataArray[8]+=parseInt(item.size_1025);
-          dataArray[9]+=parseInt(item.size_1500);
+          dataArray[0]+=toInteger(item.size_40);
+          dataArray[1]+=toInteger(item.size_41);
+          dataArray[2]+=toInteger(item.size_54);
+          dataArray[3]+=toInteger(item.size_55);
+          dataArray[4]+=toInteger(item.size_61);
+          dataArray[5]+=toInteger(item.size_101);
+          dataArray[6]+=toInteger(item.size_257);
+          dataArray[7]+=toInteger(item.size_513);
+          dataArray[8]+=toInteger(item.size_1025);
+          dataArray[9]+=toInteger(item.size_1500);
         });
         var rowdata =new Array();
         rowdata.push(start);
@@ -1028,12 +1023,12 @@ app.get('/search', function(req, res,next){
         if(err) return next(err);
         if(!results) return res.send(404);
         results.forEach(function(item,index){       
-          dataArray[0]+=parseInt(item.ftp_21);
-          dataArray[1]+=parseInt(item.telnet_23);
-          dataArray[2]+=parseInt(item.http_80);
-          dataArray[3]+=parseInt(item.smtp_25);
-          dataArray[4]+=parseInt(item.pop3_110);
-          dataArray[5]+=parseInt(item.elseport);
+          dataArray[0]+=toInteger(item.ftp_21);
+          dataArray[1]+=toInteger(item.telnet_23);
+          dataArray[2]+=toInteger(item.http_80);
+          dataArray[3]+=toInteger(item.smtp_25);
+          dataArray[4]+=toInteger(item.pop3_110);
+          dataArray[5]+=toInteger(item.elseport);
         });
         var rowdata =new Array();
         rowdata.push(start);
@@ -1094,7 +1089,7 @@ app.get('/search', function(req, res,next){
       var fileName ={packageNum:"packet",trafficNum:"traffic",fragment:"fragment",ack:"ack",syn:'syn',fin:"fin",syn_ack:"syn_ack"};
       var value=new Array();
       if(req.query){
-        var step = parseInt(req.query.step);
+        var step = toInteger(req.query.step);
         var queryStr = "select "+ptype+" from feature where time >="+start+" and time <="+end;
         db.query(queryStr,function(err,results){
           if(err) return next(err);
@@ -1105,11 +1100,11 @@ app.get('/search', function(req, res,next){
           results.forEach(function(item, index){            
               if(index%step){
                 num++;
-                value[i] += parseInt(item[ptype]);
+                value[i] += toInteger(item[ptype]);
                 if(index==results.length-1){value[i]=value[i]/num}
               }else{
                 i++;               
-                value[i] = parseInt(item[ptype]);
+                value[i] = toInteger(item[ptype]);
                 if(i-1>=0){value[i-1]=value[i-1]/num;} 
                 num=1;              
               }            

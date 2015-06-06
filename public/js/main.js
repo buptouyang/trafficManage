@@ -2,10 +2,6 @@ var routeApp = angular.module('mainContent',['ngRoute']);
 var legendText =['',"流量大小特征(单位:MB)","包数特征(单位:千个)","五元组","分片","包长分布(单位:百分百)"];
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
-	.when('/main',{
-		templateUrl:'tpl/feature.html',
-		controller:'featureCtl'
-	})	
 	.when('/trafficManage',{
 		templateUrl:'tpl/trafficManage.html',
 		controller:'manageCtl'
@@ -18,23 +14,8 @@ routeApp.config(['$routeProvider',function($routeProvider){
 		templateUrl:'tpl/machineManage.html',
 		controller:'machineCtl'
 	})
-	/*.when('/feature/:type',{
-		templateUrl:'tpl/featureChart.html',
-		controller:'featureChartCtl'
-	})
-	.when('/emulate',{
-		templateUrl:'tpl/emulation.html',
-		controller:'emulateCtl'
-	})
-	.when('/login',{
-		templateUrl:'login.html',
-		controller:'loginCtl'
-	})*/
 }]);
-/*
-routeApp.controller('loginCtl',function($scope,$http){
 
-});*/
 routeApp.factory('trafficInfo',function(){
 	return {};
 });
@@ -155,33 +136,9 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			        onPageClick: function (event, page) {
 			        	var query = $.trim($('#queryString').val());
 			            $scope.getList(query,page);
-			           /* $.ajax({
-							url:'/trafficInfo',
-							type:'GET',
-							data:{queryStr:query,page:page},
-							dataType:'json',
-							success:function(data){
-								var statusArray = ['准备运行','正在运行','结束运行'];
-								if(data.status==0 && data.dataList){
-									$.each(data.dataList,function(index,item){
-										item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
-										item.status = statusArray[item.status];
-										item.descript = item.descript?unescape(item.descript):'';
-									});
-									$scope.$apply(function(){
-										$scope.infos = data.dataList;	
-									});
-								}
-								
-							   // $('#pagination-traffic').twbsPagination().destroy();
-							    
-							}
-						});*/
 			            $scope.page = page;
 			        }
-			    });
-			   // $('#pagination-traffic').twbsPagination().destroy();
-			    
+			    });		    
 			}
 		});
 	}
@@ -274,9 +231,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 					alert(data.message);
 				}
 			}
-		});
-
-	
+		});	
 	});
 
 /*	$("body").delegate("[name='machineType']:checked","change",function(e){	
@@ -635,7 +590,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
     	var totalBoolean = $('#totalUp').prop('checked');
-    	/*if(totalBoolean == 'true'){
+    	/*if(totalBoolean == true){
     		timeScale = 1;
     	}else{
     		timeScale = $('#timeScale').val() || 1;
@@ -678,11 +633,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
     	var totalBoolean = $('#totalUp').prop('checked');
-    	if(totalBoolean == 'true'){
-    		timeScale = 1;
-    	}else{
-    		timeScale = $('#timeScale').val() || 1;
-    	}
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTime;
@@ -1216,61 +1166,61 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		    });
 		}
 	});*/
-$scope.addCompareTraffic = function(query,page){			
-	$.ajax({
-		url:'/trafficCap',
-		type:'GET',
-		data:{queryStr:query,page:page},
-		dataType:'json',
-		success:function(data){
-			if(data.status==0 && data.dataList){
-				$.each(data.dataList,function(index,item){
-					if(item.name == $scope.trafficName){
-						item.comdisable = true;
-					}
-					if(item.descript == null){
-						item.descript = '';
-					}
-					item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
-					$.each($scope.comCkListdata,function(cpindex,cpItem){
-						if(cpItem.name == item.name || item.name == $scope.trafficName){
+	$scope.addCompareTraffic = function(query,page){			
+		$.ajax({
+			url:'/trafficCap',
+			type:'GET',
+			data:{queryStr:query,page:page},
+			dataType:'json',
+			success:function(data){
+				if(data.status==0 && data.dataList){
+					$.each(data.dataList,function(index,item){
+						if(item.name == $scope.trafficName){
 							item.comdisable = true;
-							return false;
-						}else{
-							item.comdisable = false;
 						}
+						if(item.descript == null){
+							item.descript = '';
+						}
+						item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
+						$.each($scope.comCkListdata,function(cpindex,cpItem){
+							if(cpItem.name == item.name || item.name == $scope.trafficName){
+								item.comdisable = true;
+								return false;
+							}else{
+								item.comdisable = false;
+							}
+						});
+						item.descript = unescape(item.descript);	
 					});
-					item.descript = unescape(item.descript);	
-				});
-				//console.log(data.dataList)
-				$scope.$apply(function(){
-					$scope.comInfos = data.dataList;
-				});
-				$("#addModal .modal-body").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
-				$('#pagination-traffic').twbsPagination({
-			        totalPages: data.totalPng,
-			        visiblePages: 3,
-			        first:'第一页',
-			        prev:'前一页',
-			        next:'后一页',
-			        last:'最后一页',
-			        startPage:1,
-			        onPageClick: function (event, page) {
-			        	var query = $.trim($('#queryString').val());
-			            $scope.addCompareTraffic(query,page);
-			        }
-			    });
+					//console.log(data.dataList)
+					$scope.$apply(function(){
+						$scope.comInfos = data.dataList;
+					});
+					$("#addModal .modal-body").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
+					$('#pagination-traffic').twbsPagination({
+				        totalPages: data.totalPng,
+				        visiblePages: 3,
+				        first:'第一页',
+				        prev:'前一页',
+				        next:'后一页',
+				        last:'最后一页',
+				        startPage:1,
+				        onPageClick: function (event, page) {
+				        	var query = $.trim($('#queryString').val());
+				            $scope.addCompareTraffic(query,page);
+				        }
+				    });
+				}
 			}
-		}
-	  });	
-}
-$("body").delegate("#query","click",function(e){
-	var queryStr = $.trim($("#queryString").val());
-	$("#pagination-traffic").remove();
-	$scope.addCompareTraffic(queryStr,1);
-})
-    $('#addModal').on('show.bs.modal', function (event) {
-    	$("#pagination-traffic").remove();
+		  });	
+	}
+	$("body").delegate("#query","click",function(e){
+		var queryStr = $.trim($("#queryString").val());
+		$("#pagination-traffic").remove();
+		$scope.addCompareTraffic(queryStr,1);
+	})
+	$('#addModal').on('show.bs.modal', function (event) {
+		$("#pagination-traffic").remove();
 	  	$scope.addCompareTraffic('',1);	
 	});
 });
@@ -1356,11 +1306,7 @@ routeApp.controller('machineCtl',function($scope,$http){
 	});
 	
 });
-	
 
-routeApp.controller('emulateCtl',function($scope,$http){
-
-});
 routeApp.directive('datepicker', function() {
   return{
     restrict: 'EA',
@@ -1368,8 +1314,6 @@ routeApp.directive('datepicker', function() {
         error:'=dateError'
     },
     link:function(scope, element, attrs) {
-      //console.log(scope.err)
-
       var utcStartTime,utcEndTime,err;
       element.datetimepicker({
           language:  'zh-CN',
