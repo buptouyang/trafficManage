@@ -262,8 +262,10 @@ app.get('/exceldata', function(req, res,next){
     } else {  //有结果
       var wstart,wend;
       db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
+        console.log(timeResults)
         var formalTime = timeResults[0].t_start;
-        var tendTime = formalTime+timeResults[0].t_end;
+        //var tendTime = formalTime+timeResults[0].t_end;
+        var tendTime = timeResults[0].t_end;
         var conf ={};
         var confrowdata=new Array();
         if(queryObj.start!=0 ){
@@ -309,61 +311,59 @@ app.get('/exceldata', function(req, res,next){
                 width:60
             },
             {
-                caption:'1字节~53字节',  
+                caption:'1字节~53字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'54~79字节',  
+                caption:'54~79字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'80字节~159字节',  
+                caption:'80字节~159字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'160字节~319字节',  
+                caption:'160字节~319字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'320字节~639字节',  
+                caption:'320字节~639字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'640字节~1279字节',  
+                caption:'640字节~1279字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'1280字节~1518字节',  
+                caption:'1280字节~1518字节(单位：个)',  
                 type:'number',
                 width:60
             },
             {
-                caption:'1519字节以上',  
+                caption:'1519字节以上(单位：个)',  
                 type:'number',
                 width:60
             }];
           }else{  //其他线图
-            console.log(results);
             if(queryObj.total == 'true'){
               results = totalUp(results);
               results = scaleUp(queryObj.scale,results);
             }else{
               results = scaleUp(queryObj.scale,results);
             } 
-            console.log(results)
             results.forEach(function(item, index){
               var rowdata =new Array();    
-              rowdata.push(NormalDate(formalTime+toInteger(item.time)));
+              //rowdata.push(NormalDate(formalTime+toInteger(item.time)));
+              rowdata.push(NormalDate(toInteger(item.time)));
               rowdata.push(item.sumData);
               confrowdata.push(rowdata);
             });
-            console.log(confrowdata)
             conf.rows = confrowdata;
             conf.cols = [{
               caption:'时刻',   
@@ -379,10 +379,15 @@ app.get('/exceldata', function(req, res,next){
                   width:20
               },*/
               {
-                  caption:'数据',  
+                  caption:'数据(单位：byte)',  
                   type:'number',
                   width:20
             }];
+            if(queryObj.type == '1'){
+              conf.cols[1].caption = '数据(单位：MB)';
+            }else if(queryObj.type == '3' || queryObj.type =='2' || queryObj.type =='4'){
+              conf.cols[1].caption = '数据(单位：个)';
+            }
           }//非饼状
           //解决中文乱码
           var userAgent = (req.headers['user-agent']||'').toLowerCase();

@@ -527,7 +527,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				        var option_real = 
 							{
 						        title : {
-						            text: ''
+						            text: '',
+						            padding:10,
 						        },
 						        tooltip : {
 						            trigger: 'item'
@@ -559,13 +560,21 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						        ],
 						        series : []
 						    };
+						if(type == '4' || type =='3' || type =='2'){
+							option_real.yAxis[0].axisLabel.formatter = '{value}';
+						}else{
+							option_real.yAxis[0].axisLabel.formatter =  function(value){
+		                    	return Math.round(value/1024);
+		                    };
+						}
 						$scope.compDis = true;
 						$scope.$apply();
-						var formalTime = UTCDay($scope.mstartTime);
+						//var formalTime = UTCDay($scope.mstartTime);
 						lineSeries.name = $scope.trafficName;
 						$.each(data.dataList,function(index,item){
 					  		valueData.push(item.sumData);
-							timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
+							//timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
+							timeData.push(NormalDate(parseInt(item.time,10)));		
 						});
 						lineSeries.data = valueData;
 						initOption(option_real,legendText[type],[$scope.trafficName],timeData,lineSeries);
@@ -578,10 +587,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     });
     function search(callback){ 
     	type = $('#searchType').val();
-    	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
+    	//var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
+    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
     	var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
-    	var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
+    	// var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
+    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
     	var timeScale;
@@ -621,10 +632,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
         }
         $("#watch").css("background-color","#f0ad4e");
     	var ctype = $('#searchType').val();
-    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val())-UTCDay($scope.mstartTime):0;
+    	// var startHour = $("#startTime").val()?UTCDay($("#startTime").val())-UTCDay($scope.mstartTime):0;
+    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
     	var startSec =  $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
-    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val())-UTCDay($scope.mstartTime):0;
+    	//var endHour = $("#endTime").val()?UTCDay($("#endTime").val())-UTCDay($scope.mstartTime):0;
+    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
     	var timeScale = parseInt($('#timeScale').val()) || 1;
@@ -770,11 +783,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				myChart?myChart.clear():'';
 				myChart.setOption(option_pie);
 			}else{
-				var formalTime = UTCDay($scope.mstartTime);
+				//var formalTime = UTCDay($scope.mstartTime);
 				lineSeries.name = $scope.trafficName;
 				$.each(data.dataList,function(index,item){
 			  		valueData.push(item.sumData);
-					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));			
+					//timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
+					timeData.push(NormalDate(parseInt(item.time,10)));		
 				});
 				lineSeries.data = valueData;
 				if(type == '4' || type =='3' || type =='2'){
