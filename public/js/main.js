@@ -408,11 +408,17 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
 	});
 	$("#netPro").change(function(e){
-		var id = $("#netPro").val();
+		getTransport($("#netPro"),'');
+	});
+	$("#cp_netPro").change(function(e){
+		getTransport($("#cp_netPro"),'cp_');
+	});
+	function getTransport(ele,pre){
+		var id = ele.val();
 		if(id == '' || id == '2'){
-			$scope.transDis = true;
+			$scope[pre+'transDis'] = true;
 		}else{
-			$scope.transDis = false;
+			$scope[pre+'transDis'] = false;
 		}
 		$.ajax({
 			url:'/transInfo',
@@ -421,12 +427,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			dataType:'json',
 			success:function(data){
 				if(data.status == 0 && data.dataList){
-					$scope.trans = data.dataList;
+					$scope[pre+'trans'] = data.dataList;
 					$scope.$apply();
 				}
 			}
 		});
-	})
+	}
     function initOption(option,title,legend,x,series){
     	if(!option){
     		return;
@@ -552,7 +558,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						                type : 'value',
 						                axisLabel : {
 						                    formatter: function(value){
-						                    	return Math.round(value/1024)+'MB';
+						                    	return Math.round(value/1024)+'KB';
 						                    }
 						                },
 						                splitArea : {show : true}
@@ -569,12 +575,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						}
 						$scope.compDis = true;
 						$scope.$apply();
-						//var formalTime = UTCDay($scope.mstartTime);
+						var formalTime = UTCDay($scope.mstartTime);
 						lineSeries.name = $scope.trafficName;
 						$.each(data.dataList,function(index,item){
 					  		valueData.push(item.sumData);
-							//timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
-							timeData.push(NormalDate(parseInt(item.time,10)));		
+							timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
+							//timeData.push(NormalDate(parseInt(item.time,10)));		
 						});
 						lineSeries.data = valueData;
 						initOption(option_real,legendText[type],[$scope.trafficName],timeData,lineSeries);
@@ -587,12 +593,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     });
     function search(callback){ 
     	type = $('#searchType').val();
-    	//var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
-    	var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
+    	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
+    	//var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
     	var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
-    	// var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
-    	var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0;
+    	var endHour = $("#endTime").val()?(UTCDay($("#endTime").val())-UTCDay($scope.mstartTime)):0;
+    	//var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
     	var timeScale;
@@ -632,7 +638,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
         }
         $("#watch").css("background-color","#f0ad4e");
     	var ctype = $('#searchType').val();
-    	// var startHour = $("#startTime").val()?UTCDay($("#startTime").val())-UTCDay($scope.mstartTime):0;
+    	//var startHour = $("#startTime").val()?UTCDay($("#startTime").val())-UTCDay($scope.mstartTime):0;
     	var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
     	var startSec =  $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
     	var startTime = startHour+startSec;
@@ -783,12 +789,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				myChart?myChart.clear():'';
 				myChart.setOption(option_pie);
 			}else{
-				//var formalTime = UTCDay($scope.mstartTime);
+				var formalTime = UTCDay($scope.mstartTime);
 				lineSeries.name = $scope.trafficName;
 				$.each(data.dataList,function(index,item){
 			  		valueData.push(item.sumData);
-					//timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
-					timeData.push(NormalDate(parseInt(item.time,10)));		
+					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
+					//timeData.push(NormalDate(parseInt(item.time,10)));		
 				});
 				lineSeries.data = valueData;
 				if(type == '4' || type =='3' || type =='2'){
@@ -1236,6 +1242,18 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	$('#addModal').on('show.bs.modal', function (event) {
 		$("#pagination-traffic").remove();
 	  	$scope.addCompareTraffic('',1);	
+	  	$.ajax({
+			url:'/netInfo',
+			type:'get',
+			dataType:'json',
+			success:function(data){
+				if(data.status == 0 && data.dataList){
+					$scope.cp_net = data.dataList;
+					$("#cp_netPro").trigger('change');
+					$scope.$apply();
+				}
+			}
+		});
 	});
 });
 	

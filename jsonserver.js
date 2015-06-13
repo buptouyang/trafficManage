@@ -359,8 +359,8 @@ app.get('/exceldata', function(req, res,next){
             } 
             results.forEach(function(item, index){
               var rowdata =new Array();    
-              //rowdata.push(NormalDate(formalTime+toInteger(item.time)));
-              rowdata.push(NormalDate(toInteger(item.time)));
+              rowdata.push(NormalDate(formalTime+toInteger(item.time)));
+              //rowdata.push(NormalDate(toInteger(item.time)));
               rowdata.push(item.sumData);
               confrowdata.push(rowdata);
             });
@@ -725,7 +725,7 @@ app.post('/stopTask', function(req, res,next){
   if(req.body.type == '2'){
     queryExpression = 'update traffic_info set t_run_flag=2 where t_id='+id;
   }else if(req.body.type == '1'){
-    queryExpression = 'update generate_traffic_info set g_run_flag=2 where t_id='+id;
+    queryExpression = 'update generate_traffic_info set g_run_flag=2 where g_id='+id;
   }  
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){

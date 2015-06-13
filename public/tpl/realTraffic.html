@@ -101,7 +101,35 @@
       <button class="btn btn-default pull-right" id="query" ng-click="query($event)" style="margin-right:10px">查询</button><input type='text' id="queryString" style="color:#000;float:right;margin:4px">
       <h4 class="modal-title">对比流量</h4>
     </div>
-    <div class="modal-body">	
+    <div class="modal-body">
+	 <!-- 	<div>
+	  		<label for="" class="Searchlabel">开始时间</label>
+	 			<input size="13" type="text" readonly class="form_datetime" id="cp_startTime" datepicker><span style="font-weight:bold">:</span>
+	  		<input type="number"  min="0" max="59" id="cp_startSec" style="width:65px;">秒 </br>
+	 		 	
+	 <label for="" class="Searchlabel">结束时间</label>
+	 	<input size="13" type="text" readonly class="form_datetime" id="cp_endTime" datepicker><span style="font-weight:bold">:</span>
+	  		<input type="number"  min="0" max="59" id="cp_endSec" style="width:65px;">秒 </br>
+	  		</div>	 -->
+ 		<div style="margin-top:5px;">
+ 		
+ 		<label for="" class="Searchlabel">网络协议</label>
+	 	<select name="cp_net_pro" id="cp_netPro">
+	 		<option value="">所有</option>
+ 			<option ng-repeat="data in cp_net" value="{{data.id}}">{{data.name}}</option>
+ 		</select>
+ 		<label for="" class="Searchlabel">传输层协议</label>
+	 	<select name="cp_trans_pro" id="cp_transPro" ng-disabled='cp_transDis'>
+	 		<option value="">所有</option>
+	 		<option ng-repeat="data in cp_trans" value="{{data.id}}">{{data.name}}</option>
+ 		</select>
+ 		<label for="" class="Searchlabel">端口</label>
+	 	<select name="cp_port" id="cp_portId">
+	 		<option value="">所有</option>
+ 			<option value="0">0</option>
+ 			<option value="1">1</option>
+ 		</select>
+ 	</div>	
       <table class="table">
 	    <thead>
 	    	<tr>
