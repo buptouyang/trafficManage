@@ -108,3 +108,7 @@ text-align: center;
 	color:#fff;
 	font-size: 20px;
 }
+.trafficDesc table tbody tr td{
+	max-width: 220px;
+	word-break:break-all;
+}

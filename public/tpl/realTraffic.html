@@ -12,6 +12,7 @@
 		 			<option value="3">五元组</option>
 		 			<option value="4">分片</option>
 		 			<option value="5">包长分布</option>
+		 			<option value="0">所有</option>
 		 		</select>
 	  			<label for="" class="Searchlabel">开始时间</label>
 	  			<input size="16" type="text" readonly class="form_datetime" id="startTime" datepicker ng-model="dateStart" date-error="errMessage"><span style="font-weight:bold">:</span>
@@ -68,15 +69,12 @@
 			</table>
 	  </div>
 	</div>
-
-<!-- <tr><td><input type="checkbox" name="deleList"></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr>
-			    	<tr><td><input type="checkbox" name="deleList"></td></td><td>北京电信</td><td>2015-01-01~2016-05-05</td></tr> -->
-<!-- <tr><td>序列1(点击后出树图，不能修改)</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr>
-<tr><td>序列1</td><td><input type="text"></td><td><input type="text"></td><td><select><option value="">北京</option><option value="">上海</option></select></td><td><input type="text"></td><td><button class='btn btn-danger' id='dele'  data-toggle='modal' data-target='#deleModal'>删除</button></td><input type="hidden" id="sequence" value="1"></tr> -->
 </div>  <!-- end of sidenav -->
-<div class="right_content" id="featureChart">
-	
-</div>
+<div class="right_content" id="featureChart"></div>
+<div class="graph_content" id="sizeChart"></div>
+<div class="graph_content" id="pktChart"></div>
+<div class="graph_content" id="tupleChart"></div>
+<div class="graph_content" id="fragChart"></div>
 <div class="modal fade" id="deleModal">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">

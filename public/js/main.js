@@ -1,5 +1,6 @@
 var routeApp = angular.module('mainContent',['ngRoute']);
-var legendText =['',"流量大小特征(单位:MB)","包数特征(单位:千个)","五元组","分片","包长分布(单位:百分百)"];
+var legendText =['特征',"流量大小特征(单位:MB)","包数特征(单位:个)","五元组","分片","包长分布(单位:百分百)"];
+var nameSeries = {size:'流量大小(MB)',pkt:'包数(个)',tuple:'五元组(个)',frag:'分片(个)'};
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
 	.when('/trafficManage',{
@@ -14,7 +15,10 @@ routeApp.config(['$routeProvider',function($routeProvider){
 		templateUrl:'tpl/machineManage.html',
 		controller:'machineCtl'
 	})
-}]);
+/*	.other({
+
+	});*/
+}]); 
 
 routeApp.factory('trafficInfo',function(){
 	return {};
@@ -90,7 +94,6 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 						}
 					});
 					$scope.$apply()
-					//$(parentEle.siblings()[3]).text('结束运行');
 				}
 			}
 		});
@@ -372,26 +375,45 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	        toolbox: {
 	            show : false
 	        },
+	        dataZoom : {
+		        show : true,
+		        realtime : true,
+		        start : 0,
+		        end : 100
+		    },
 	        calculable : true,
 	        xAxis : [
 	            {
 	                type : 'category',
-	                name:"时间",                       
+	                /*name:"时间", */                      
 	                data:['']
 	            }
 	        ],
 	        yAxis : [
 	            {
 	                type : 'value',
+	                splitNumber:50000,
 	                axisLabel : {
 	                    formatter: function(value){
-	                    	return Math.round(value/1024);
+	                    	return Math.round(value/1024/1024)+'MB';
 	                    	//Math.round(value)+'GB';
 	                    },
 	                    interval:1048576
 	                },
 	                splitArea : {show : true}
-	            }
+	            },
+	            {
+		            type : 'value',
+		            splitNumber: 10,
+		            axisLabel : {
+		                formatter: function (value) {
+		                    return value 
+		                }
+		            },
+		            splitLine : {
+		                show: false
+		            }
+		        }
 	        ],
 	        series : []
 	    };
@@ -441,7 +463,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	title?option.title.text = title:'';
     	legend?option.legend.data=legend:'';
     	x?option.xAxis[0].data = x:'';	
-    	series?option.series.push(series):'';
+    	//series?option.series.push(series):'';
+    	option.series=series?series:'';
     }
     function addOption(option,legend,x,series,type){
     	if(legend){
@@ -521,71 +544,132 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    		dataType:'json',
 	    		success:function(data){
 	    			if(data.status == 0 && data.dataList){
-	    				data.dataList = data.dataList.reverse();
-	    				var lengendData = [];
-						var valueData = [];	
-						var timeData = [];
-						var lineSeries = {
-				            name:'',
-				            type:'line',
-				            data:[]
-				        }
-				        var option_real = 
-							{
-						        title : {
-						            text: '',
-						            padding:10,
-						        },
-						        tooltip : {
-						            trigger: 'item'
-						        },
-						        legend: {
-						            data:[]
-						        },
-						        toolbox: {
-						            show : false
-						        },
-						        calculable : true,
-						        xAxis : [
-						            {
-						                type : 'category',
-						                name:"时间",                       
-						                data:['']
-						            }
-						        ],
-						        yAxis : [
-						            {
-						                type : 'value',
-						                axisLabel : {
-						                    formatter: function(value){
-						                    	return Math.round(value/1024)+'KB';
-						                    }
-						                },
-						                splitArea : {show : true}
-						            }
-						        ],
-						        series : []
-						    };
-						if(type == '4' || type =='3' || type =='2'){
-							option_real.yAxis[0].axisLabel.formatter = '{value}';
-						}else{
-							option_real.yAxis[0].axisLabel.formatter =  function(value){
-		                    	return Math.round(value/1024);
-		                    };
-						}
-						$scope.compDis = true;
-						$scope.$apply();
-						var formalTime = UTCDay($scope.mstartTime);
-						lineSeries.name = $scope.trafficName;
-						$.each(data.dataList,function(index,item){
-					  		valueData.push(item.sumData);
-							timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
-							//timeData.push(NormalDate(parseInt(item.time,10)));		
-						});
-						lineSeries.data = valueData;
-						initOption(option_real,legendText[type],[$scope.trafficName],timeData,lineSeries);
-						myChart?myChart.clear():'';
-						myChart.setOption(option_real);			 
+					    if(type=='0'){
+					    	$('.graph_content').css('display','block');
+					    	$('.right_content').css('display','none');
+					    	var option_size={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+					    	axisLabel:{formatter:function(value){return Math.round(value/1024/1024)+"MB"}},splitArea:{show:true}}],series:[]};
+					    	var option_pkt={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+					    	var option_tuple={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+					    	var option_frag={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+					    	var totalseries={size:[],pkt:[],tuple:[],frag:[]};
+					    	var timeData = [];
+					    	$scope.compDis = true;
+							$scope.$apply();
+							var formalTime = UTCDay($scope.mstartTime);
+							var sizeChart = echarts.init(document.getElementById('sizeChart'));
+							var pktChart = echarts.init(document.getElementById('pktChart'));
+							var tupleChart = echarts.init(document.getElementById('tupleChart'));
+							var fragChart = echarts.init(document.getElementById('fragChart'));
+							$.each(data.dataList,function(index,item){
+								if(index != 'time' && item.length > 0){
+									var lineSeries = {
+							            name:'',
+							            type:'line',
+							            data:[]
+							        };
+									lineSeries.data = item;
+									lineSeries.name = nameSeries[index];
+									//legend.push(nameSeries[index]);
+									totalseries[index].push(lineSeries);
+								}		
+							});
+							$.each(data.dataList.time,function(index,item){
+								timeData.push(NormalDate(formalTime+parseInt(item,10)));		
+							});
+							initOption(option_size,legendText[1],[$scope.trafficName],timeData,totalseries['size']);
+							initOption(option_pkt,legendText[2],[$scope.trafficName],timeData,totalseries['pkt']);
+							initOption(option_tuple,legendText[3],[$scope.trafficName],timeData,totalseries['tuple']);
+							initOption(option_frag,legendText[4],[$scope.trafficName],timeData,totalseries['frag']);
+							sizeChart?sizeChart.clear():'';
+							pktChart?pktChart.clear():'';
+							tupleChart?tupleChart.clear():'';
+							fragChart?fragChart.clear():'';
+							sizeChart.setOption(option_size);
+							pktChart.setOption(option_pkt);
+							tupleChart.setOption(option_tuple);
+							fragChart.setOption(option_frag);
+					    }else{
+					    	$('.graph_content').css('display','none');
+					    	$('.right_content').css('display','block');
+					    	var lengendData = [];
+							var valueData = [];	
+							var timeData = [];
+					        var totalseries = [];
+					        var legend = [];
+					        var option_real = 
+								{
+							        title : {
+							            text: '',
+							            padding:10,
+							        },
+							        tooltip : {
+							            trigger: 'item'
+							        },
+							        legend: {
+							            data:[]
+							        },
+							        toolbox: {
+							            show : false
+							        },
+							        calculable : true,
+							        xAxis : [
+							            {
+							                type : 'category',
+							                /*name:"时间",  */                     
+							                data:['']
+							            }
+							        ],
+							        yAxis : [
+							            {
+							                type : 'value',
+							                axisLabel : {
+							                    formatter: function(value){
+							                    	return Math.round(value/1024/1024)+'MB';
+							                    }
+							                },
+							                splitArea : {show : true}
+							            }
+							        ],
+							        series : []
+							    };
+					    	$scope.compDis = true;
+							$scope.$apply();
+							var formalTime = UTCDay($scope.mstartTime);
+							$.each(data.dataList,function(index,item){
+								if(index != 'time' && item.length > 0){
+									var lineSeries = {
+							            name:'',
+							            type:'line',
+							            data:[]
+							        };
+									lineSeries.data = item;
+									lineSeries.name = nameSeries[index];
+									if(index == 'tuple' || index == 'frag' || index == 'pkt'){
+										option_real.yAxis[0].axisLabel={formatter: '{value}'};
+									}else{
+										option_real.yAxis[0].axisLabel={formatter: function(value){
+							                    	return Math.round(value/1024/1024)+'MB';
+							                    }};
+									}
+									legend.push(nameSeries[index]);
+									totalseries.push(lineSeries);
+								}		
+							});
+							$.each(data.dataList.time,function(index,item){
+								timeData.push(NormalDate(formalTime+parseInt(item,10)));		
+							});
+							initOption(option_real,legendText[type],legend,timeData,totalseries);
+							myChart?myChart.clear():'';
+							myChart.setOption(option_real);	
+					    }								 
 	    			}
 	    		}
 	    	});
@@ -627,7 +711,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     		success:function(data){
     			if(data.status == 0 && data.dataList){
     				callback(data,type,totalBoolean);
-    				localStorage.setItem('searchData',JSON.stringify(data.dataList));					 
+    				//localStorage.setItem('searchData',JSON.stringify(data.dataList));					 
     			}
     		}
     	});
@@ -660,6 +744,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean+"&scale="+timeScale);
 	});
     $('#searchNum').click(function(){
+    	$('.graph_content').css('display','none');
+		$('.right_content').css('display','block');
     	myChart?myChart.clear():'';
     	$("#watch").css("background-color","#f0ad4e");
     	if(watch){
@@ -689,7 +775,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		    series : []
 		}
     	$scope.radius = 130;
-		var pieSeries = {
+		var pieSeries = [{
             name:'',
             type:'pie',
             radius:[0,$scope.radius],
@@ -704,73 +790,22 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
             	}
             },
             data:[]
-        };	
-        var lineSeries = {
+        }];	
+       /* var lineSeries = [{
             name:'',
             type:'line',
             data:[]
-        }
+        }]*/
         
         search(function(data,type,totalBoolean){
 			var lengendData = [];
 			var valueData = [];	
 			var timeData = [];
-			$scope.compDis = false;
-			$scope.lenArray[0].len = data.dataList.length;
+			if(type != '0'){
+				$scope.compDis = false;
+			}
+			
 			$scope.$apply();
-			//
-/*			var i=0;
-			var num = 0;
-			var value = [];
-			var total = 0;
-			var scale = $('#timeScale').val() || 1;
-			var results = data.dataList;
-				results.forEach(function(item,index) {
-              if(index%scale){
-                num++;
-                total += parseInt(item.sumData,10);
-                if(index==results.length-1){
-                  value[i]={};
-                  value[i].sumData=total/num;
-                  value[i].time = item.time;
-                }
-              }else{
-
-                if(i>=0){ 
-                	value[i]={};
-                  value[i].sumData=total/num;
-                  value[i].time = results[index-1].time;
-                }
-                total = parseInt(item.sumData,10);                 
-                i++;
-                num=1;
-              }
-            });
-            console.log(value)*/
-            //
-            /*results.forEach(function(item,index) {
-            	debugger
-                  console.log(index)
-                  if((index+1)%scale){
-                    num++;
-                    total += parseInt(item.sumData,10);
-                    if(index==results.length-1){
-                      value[i]={};
-                      value[i].sumData=total/num;
-                      value[i].time = item.time;
-                    }
-                  }else{
-                   	num++;
-                   	total += parseInt(item.sumData,10);
-                      value[i]={};
-                      value[i].sumData=total/num;
-                      value[i].time = results[index-1].time;
-                   
-                    total = 0;//parseInt(item.sumData,10);                
-                    i++;
-                    num=0;
-                  }
-                });*/
 			if(type == '5'){   	
 				$.each(data.dataList,function(index,item){
 			  		for(name in item){
@@ -778,86 +813,50 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 							var obj = {};
 							obj.value = item[name];
 							obj.name = name;
-							pieSeries.data.push(obj);
+							pieSeries[0].data.push(obj);
 							lengendData.push(name);
 						}			
 					}			
 				});	
-				pieSeries.name = $scope.trafficName;
+				pieSeries[0].name = $scope.trafficName;
 				initOption(option_pie,'',lengendData,'',pieSeries);
 				console.log(option_pie);
 				myChart?myChart.clear():'';
 				myChart.setOption(option_pie);
 			}else{
 				var formalTime = UTCDay($scope.mstartTime);
-				lineSeries.name = $scope.trafficName;
+				var legend = [],totalseries = [];
+				$scope.lenArray[0].len = data.dataList['size'].length;
 				$.each(data.dataList,function(index,item){
-			  		valueData.push(item.sumData);
-					timeData.push(NormalDate(formalTime+parseInt(item.time,10)));	
-					//timeData.push(NormalDate(parseInt(item.time,10)));		
+					if(index != 'time' && item.length > 0){
+						var lineSeries = {
+				            name:'',
+				            type:'line',
+				            data:[]
+				        };
+						lineSeries.data = item;
+						lineSeries.name = nameSeries[index];
+						if(index == 'tuple' || index == 'frag' || index == 'pkt'){
+							lineSeries.yAxisIndex = 1;
+						}
+						legend.push(nameSeries[index]);
+						totalseries.push(lineSeries);
+						if(totalBoolean && type != '0'){
+							option_line.title.subtext='总量:'+lineSeries.data[lineSeries.data.length-1];
+						}else{
+							option_line.title.subtext='';
+						}
+					}	
 				});
-				lineSeries.data = valueData;
-				if(type == '4' || type =='3' || type =='2'){
-					option_line.yAxis[0].axisLabel.formatter = '{value}';
-				}else{
-					option_line.yAxis[0].axisLabel.formatter =  function(value){
-                    	return Math.round(value/1024);
-                    };
-				}
-				if(totalBoolean){
-					option_line.title.subtext='总量:'+data.dataList[data.dataList.length-1].sumData;
-				}else{
-					option_line.title.subtext='';
-				}
-				initOption(option_line,legendText[type],[$scope.trafficName],timeData,lineSeries);
+				$.each(data.dataList.time,function(index,item){
+					timeData.push(NormalDate(formalTime+parseInt(item,10)));		
+				});
+				
+				initOption(option_line,legendText[type],legend,timeData,totalseries);
 				myChart?myChart.clear():'';
 				myChart.setOption(option_line);
 			}
         }); //end of click
-    	/*$.ajax({
-    		url:'/trafficInfo',
-    		data:{ctype:type,port:port,transPro:transPro,netPro:netPro,start:startTime,end:endTime,tId:tId,stype:1},
-    		type:'post',
-    		dataType:'json',
-    		success:function(data){
-
-    			if(data.status == 0 && data.dataList){
-    				var lengendData = [];
-    				var valueData = [];	
-    				var timeData = [];
-    				$scope.compDis = false;
-    				$scope.$apply();
-    				if(type == '5'){   	
-						$.each(data.dataList,function(index,item){
-					  		for(name in item){
-    							if(name !== 'time'){
-    								var obj = {};
-    								obj.value = item[name];
-    								obj.name = name;
-    								pieSeries.data.push(obj);
-    								lengendData.push(name);
-    							}			
-    						}			
-						});	
-						initOption(option_pie,'',lengendData,'',pieSeries,'');
-    					console.log(option_pie);
-    					myChart?myChart.clear():'';
-						myChart.setOption(option_pie);
-					}else{
-						lineSeries.name = $scope.trafficName;
-						$.each(data.dataList,function(index,item){
-					  		valueData.push(item.sumData);
-							timeData.push(item.time);			
-						});
-						lineSeries.data = valueData;
-						initOption(option_line,legendText[type],[$scope.trafficName],timeData,lineSeries);
-						console.log(JSON.stringify(option_line));
-						myChart?myChart.clear():'';
-						myChart.setOption(option_line);
-					}  				 
-    			}
-    		}
-    	});*/
     });
 	$scope.comCkListdata = [];
     $("body").delegate("#chooseConfirm","click",function(e){
@@ -1075,12 +1074,19 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    });
 	});*/
 	$("#searchType").change(function(e){
-		if($(e.target).val() == '5'){
+		var type = $(e.target).val();
+		if(type == '5'){
 			$scope.typeDis = true;
 			$scope.scaleDis = true;
+			if(watch){
+	        	clearInterval(watch);
+	        }
 		}else{
 			$scope.typeDis = false;
 			$scope.scaleDis = false;
+		}
+		if(type == '0'){
+			$scope.compDis = true;
 		}
 		$scope.$apply();
 	});

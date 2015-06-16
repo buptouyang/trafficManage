@@ -55,4 +55,11 @@ nav.navbar-inverse{
 .realGraph{
 	width:1200px;
 	margin:auto;
+	margin-bottom: 10px;
+}
+.graph_content{
+	display: none;
+	height: 300px;
+	border:1px solid #428bca;
+	background: #fff !important;
 }

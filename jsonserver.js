@@ -7,7 +7,7 @@ var path = require('path');
 var mysql = require('mysql');
 var config = require('./config');
 var port = 3000;  
-var typeArray =['',"traffic","package","tuple","fragment","packetdistribution"];
+var typeArray =['total',"traffic","package","tuple","fragment","packetdistribution"];
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.bodyParser());
 /*app.get('/',function(req,res,next){
@@ -63,13 +63,14 @@ app.post('/trafficDetail', function(req, res,next){
   var queryExpression = 'select';
   var queryObj = req.body;
   var type = queryObj.ctype;
-  var scale = queryObj.scale >= 1 ? toInteger(queryObj.scale):1;
+  var scale = toInteger(queryObj.scale) >= 1 ? toInteger(queryObj.scale):1;
   switch(type){
-    case '1':queryExpression +=" sum(traffic_size) as sumData";break;
-    case '2':queryExpression +=" sum(pkt_num) as sumData";break;
-    case '3':queryExpression +=" sum(tuple_num) as sumData";break;
-    case '4':queryExpression +=" sum(frag_num) as sumData";break;
+    case '1':queryExpression +=" sum(traffic_size) as size";break;
+    case '2':queryExpression +=" sum(pkt_num) as pkt";break;
+    case '3':queryExpression +=" sum(tuple_num) as tuple";break;
+    case '4':queryExpression +=" sum(frag_num) as frag";break;
     case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
+    case '0':queryExpression +=" sum(traffic_size) as size,sum(pkt_num) as pkt,sum(tuple_num) as tuple,sum(frag_num) as frag";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
   queryObj.start!='0'?(queryExpression+=" and c_time >="+queryObj.start):'';
@@ -92,58 +93,49 @@ app.post('/trafficDetail', function(req, res,next){
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);
         } else {  //有结果
-            var data={'status':0,dataList:[]};
-            var tempValue=0;
+            var data={'status':0,dataList:{size:[],pkt:[],tuple:[],frag:[],time:[]}};
+            if(type == 5){
+              data.dataList = results;
+              var str =  JSON.stringify(data); 
+              res.end(str);
+              return false;
+            }
+            var totalValue;
+            //var totalValue={size:[],pkt:[],tuple:[],frag:[],time:[]};
+            var tempValue = {size:0,pkt:0,tuple:0,frag:0};
             if(queryObj.total == 'true'){    //累积
-              var pointValue = [];
-              results.forEach(function(item,index) {
-                var totalvalue = {};
-                tempValue += toInteger(item.sumData);
-                totalvalue.time = item.time;
-                totalvalue.sumData = tempValue;
-                pointValue.push(totalvalue);
-              });
-              var searchPointLen = pointValue.length;
-              if(scale > searchPointLen){  //时间尺度
-                data.dataList.push(pointValue[searchPointLen-1]);
-              }else{
-                for(var k=(scale-1);k<searchPointLen;k+=scale){
-                  if(k > searchPointLen){
-                    data.dataList.push(pointValue[searchPointLen-1]);
-                  }else{
-                    data.dataList.push(pointValue[k]);
-                  }      
-                }
-              }              
-            }else{
-              if(scale != 1){
-                var value = new Array();
-                var i=0;
-                var num = 0;
-                var total = 0;
-                results.forEach(function(item,index) {
-                  if((index+1)%scale){
-                    num++;
-                    total += toInteger(item.sumData);
-                    if(index==results.length-1){
-                      value[i]={};
-                      value[i].sumData=total/num;
-                      value[i].time = item.time;
+              totalValue = totalUpNew(results);
+              if(scale > 1){
+                var searchPointLen = totalValue['time'].length;
+                if(scale > searchPointLen){  //时间尺度
+                  data.dataList.time.push(totalValue.time[searchPointLen-1]);
+                  for(value in totalValue){
+                    if(totalValue[value].length != 0 && value != 'time'){
+                      data.dataList[value].push(totalValue[value][searchPointLen-1]);
                     }
-                  }else{
-                    num++;
-                    total += toInteger(item.sumData,10);
-                    value[i]={};
-                    value[i].sumData=total/num;
-                    value[i].time = item.time;
-                    total = 0;//toInteger(item.sumData,10);                
-                    i++;
-                    num=0;
                   }
-                });
+                }else{
+                  for(var k=(scale-1);k<searchPointLen;k+=scale){
+                      data.dataList.time.push(totalValue.time[k]);
+                      for(value in totalValue){
+                        if(totalValue[value].length != 0 && value != 'time'){
+                          data.dataList[value].push(totalValue[value][k]);
+                        }
+                      }                          
+                  }
+                } 
+              }else{
+                data.dataList = totalValue;               
+              }
+              var str =  JSON.stringify(data); 
+              res.end(str);           
+            }else{
+              if(scale > 1){
+                var value = {};
+                value = scaleUpNew(scale,fomatResult(results),0);
                 data.dataList = value;
               }else{
-                data.dataList = results;
+                data.dataList = fomatResult(results);
               }             
             }            
             var str =  JSON.stringify(data); 
@@ -162,6 +154,7 @@ function searchData(reqparam,callback){
     case '2':queryExpression +=" sum(pkt_num) as sumData";break;
     case '3':queryExpression +=" sum(tuple_num) as sumData";break;
     case '4':queryExpression +=" sum(frag_num) as sumData";break;
+    case '0':queryExpression +=" sum(traffic_size) as size,sum(pkt_num) as pkt,sum(tuple_num) as tuple,sum(frag_num) as frag";break;
     case '5':queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
@@ -188,9 +181,34 @@ function isArrayFun(arr){
     return false;
   }
 }
-
+function totalUpNew(arr){
+  var totalValue={size:[],pkt:[],tuple:[],frag:[],time:[]};
+  var tempValue = {size:0,pkt:0,tuple:0,frag:0};
+  if(isArrayFun(arr)){
+    arr.forEach(function(item,index) {
+      for(value in item){
+        if(value != 'time'){
+          tempValue[value] += toInteger(item[value]);
+          totalValue[value].push(tempValue[value]);
+        }else{
+          totalValue['time'].push(item.time);
+        }  
+      }                
+    });
+    return totalValue;
+  }else{
+    return false;
+  }
+}
+function scaleUpNew(scale,obj,type){
+  type = type?type:0;
+  for(value in obj){
+    obj[value] = scaleArray(scale,obj[value],type);  
+  }
+  return obj;
+}
 function totalUp(arr){
-  if(isArrayFun){
+  if(isArrayFun(arr)){
     var tempValue = 0,pointValue = [];
     arr.forEach(function(item,index) {
       var totalvalue = {};
@@ -202,6 +220,34 @@ function totalUp(arr){
     return pointValue;
   }else{
     return false;
+  }
+}
+function scaleArray(scale,arr,type){
+  var pointLen = arr.length;
+  var scaleValue = [];
+  if(parseInt(scale,10) == 1){
+    return arr;
+  }else{
+      var i=0;
+      var num = 0;
+      var total = 0;
+      arr.forEach(function(item,index) {
+        if((index+1)%scale){
+          num++;
+          total += toInteger(item);
+          if(index==arr.length-1){
+            scaleValue[i]=Math.round(total/num);
+          }
+        }else{
+          num++;
+          total += toInteger(item,10);
+          scaleValue[i]=Math.round(total/num);
+          total = 0;//toInteger(item.sumData,10);                
+          i++;
+          num=0;
+        }
+      }); 
+    return scaleValue;
   }
 }
 function scaleUp(scale,arr,type){
@@ -232,14 +278,14 @@ function scaleUp(scale,arr,type){
           total += toInteger(item.sumData);
           if(index==arr.length-1){
             scaleValue[i]={};
-            scaleValue[i].sumData=total/num;
+            scaleValue[i].sumData=Math.round(total/num);
             scaleValue[i].time = item.time;
           }
         }else{
           num++;
           total += toInteger(item.sumData,10);
           scaleValue[i]={};
-          scaleValue[i].sumData=total/num;
+          scaleValue[i].sumData=Math.round(total/num);
           scaleValue[i].time = item.time;
           total = 0;//toInteger(item.sumData,10);                
           i++;
@@ -350,7 +396,7 @@ app.get('/exceldata', function(req, res,next){
                 type:'number',
                 width:60
             }];
-          }else{  //其他线图
+          }else if(queryObj.ctype != '0'){  //其他线图
             if(queryObj.total == 'true'){
               results = totalUp(results);
               results = scaleUp(queryObj.scale,results);
@@ -384,11 +430,51 @@ app.get('/exceldata', function(req, res,next){
                   width:20
             }];
             if(queryObj.type == '1'){
-              conf.cols[1].caption = '数据(单位：MB)';
+              conf.cols[1].caption = '数据';
             }else if(queryObj.type == '3' || queryObj.type =='2' || queryObj.type =='4'){
               conf.cols[1].caption = '数据(单位：个)';
+            }//非饼状
+          }else{ //所有           
+            if(queryObj.total == 'true'){
+              results = totalUpNew(results);
+              results = scaleUpNew(queryObj.scale,results,0);
+            }else{
+              results = fomatResult(results);
+              results = scaleUpNew(queryObj.scale,results,0);
+            } 
+            for(var i = 0;i<results['time'].length;i++){
+              var rowdata =new Array();
+              rowdata.push(NormalDate(formalTime+toInteger(results['time'][i])));
+              rowdata.push(results['size'][i]);
+              rowdata.push(results['pkt'][i]);
+              rowdata.push(results['tuple'][i]);
+              rowdata.push(results['frag'][i]);
+              confrowdata.push(rowdata);
             }
-          }//非饼状
+            conf.rows = confrowdata;
+            conf.cols = [{
+              caption:'时刻',   
+              type:'string',
+              width:60
+              },{
+                  caption:'流量大小',
+                  type:'number',
+                  width:20
+              },{
+                  caption:'包数',
+                  type:'number',
+                  width:20
+              },{
+                  caption:'五元组',
+                  type:'number',
+                  width:20
+              },
+              {
+                  caption:'分片',  
+                  type:'number',
+                  width:20
+            }];
+          }
           //解决中文乱码
           var userAgent = (req.headers['user-agent']||'').toLowerCase();
           if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
@@ -396,9 +482,10 @@ app.get('/exceldata', function(req, res,next){
           } else if(userAgent.indexOf('firefox') >= 0) {
               res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[queryObj.ctype])+wstart+'__'+wend+'.xlsx"');
           } else {
-              /* safari等其他非主流浏览器只能呵呵了 */
+              //safari等其他非主流浏览器只能呵呵了 
               res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(typeArray[queryObj.ctype]).toString('binary')+wstart+"__"+wend+".xlsx");
           }
+          console.log(conf)
           var excelResult = nodeExcel.execute(conf);
           res.setHeader('Content-Type', 'application/vnd.openxmlformats');
           res.setHeader('charset', 'GB2312');
@@ -538,6 +625,25 @@ app.get('/trafficCap', function(req, res,next){
         }
   });
 });
+function fomatResult(results){
+  var list = {size:[],pkt:[],tuple:[],frag:[],time:[]}
+  results.forEach(function(item,index) {
+    list['time'].push(item['time']);
+    if(item['size']){
+      list['size'].push(item['size']);
+    }
+    if(item['pkt']){
+      list['pkt'].push(item['pkt']);
+    }
+    if(item['tuple']){
+      list['tuple'].push(item['tuple']);
+    }
+    if(item['frag']){
+      list['frag'].push(item['frag']);
+    }             
+  });
+  return list;
+}
 //实时流量
 app.post('/realTime', function(req, res,next){
   var queryExpression = 'select';
@@ -545,10 +651,11 @@ app.post('/realTime', function(req, res,next){
   var queryObj = req.body;
   console.log(queryObj);
   switch(type){
-    case 1:queryExpression +=" sum(traffic_size) as sumData";break;
-    case 2:queryExpression +=" sum(pkt_num) as sumData";break;
-    case 3:queryExpression +=" sum(tuple_num) as sumData";break;
-    case 4:queryExpression +=" sum(frag_num) as sumData";break;
+    case 1:queryExpression +=" sum(traffic_size) as size";break;
+    case 2:queryExpression +=" sum(pkt_num) as pkt";break;
+    case 3:queryExpression +=" sum(tuple_num) as tuple";break;
+    case 4:queryExpression +=" sum(frag_num) as frag";break;
+    case 0:queryExpression +=" sum(traffic_size) as size,sum(pkt_num) as pkt,sum(tuple_num) as tuple,sum(frag_num) as frag";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+queryObj.tId;
   queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
@@ -567,8 +674,12 @@ app.post('/realTime', function(req, res,next){
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);         
         } else {  //有结果
-            var data={'status':0,dataList:[]};
-            data.dataList=results;
+            var data={'status':0,dataList:{size:[],pkt:[],tuple:[],frag:[],time:[]}};
+            data.dataList = fomatResult(results);
+            console.log(data.dataList)
+            for (value in data.dataList){
+              data.dataList[value] = data.dataList[value].reverse();
+            }
             var str =  JSON.stringify(data); 
             res.end(str);
         }
@@ -807,353 +918,6 @@ app.post('/machineAll', function(req, res,next){
       }
   }); 
 });
-//http://localhost:3000/search?type=1&start=201411181212&end=201411181213&callback=a    //10.108.24.18
-/*app.get('/feature', function(req, res,next){
-  var databaseName;    
-  switch(req.query.type){
-    case "num":
-      databaseName="feature";break;
-    case "portPer":
-      databaseName="portdistribution";break;
-    case "packagePer":
-      databaseName="packetdistribution";break;
-  }
-  var queryExpression="select time from "+databaseName;
-  db.query(queryExpression,function(err,results){
-      if(err) return next(err);
-        if(!results) return res.send(404);
-        if (req.query && req.query.callback) {  
-          var str =  req.query.callback + '(' + JSON.stringify(results) + ')';//jsonp  
-          res.end(str);
-        }
-  });
-
-});
-
-app.get('/search', function(req, res,next){
-  console.log(req.query.start); console.log(req.query.end);
-  var type = req.query.type;
-  switch(type){
-    case "packageNum":
-    case "trafficNum":
-    case "fragment":
-    case "ack":
-    case "syn":
-    case "fin":
-    case "syn_ack":
-    {
-     var databasesql= "select "+type+" from feature where time >="+req.query.start+" and time <="+req.query.end;
-      db.query(databasesql,function(err,results){
-        var step = toInteger(req.query.step);
-        if(err) return next(err);
-        if(!results) return res.send(404);
-        if (req.query && req.query.callback) {
-          console.log(type);
-          
-          var value=new Array();
-          var i=-1;
-          var num;
-          value[0]=results[0][type];
-          results.forEach(function(item, index){            
-              if(index%step){
-                num++;
-                value[i] += toInteger(item[type]);
-                if(index==results.length-1){value[i]=value[i]/num}
-              }else{
-                i++;               
-                value[i] = toInteger(item[type]);
-                if(i-1>=0){value[i-1]=value[i-1]/num;} 
-                num=1;              
-              }            
-          });
-
-          var str =  req.query.callback + '(' + JSON.stringify(value) + ')';//jsonp  
-          res.end(str);
-        }  
-      });
-      break;  
-    }
-    case "portPer":{           
-        var dataArray = new Array(0,0,0,0,0,0);       
-        if (req.query && req.query.callback) {
-          db.query("select * from portdistribution where time >=? and time <=?",[req.query.start,req.query.end],function(err,results){ 
-            if(err) return next(err);
-            if(!results) return res.send(404);
-            results.forEach(function(item,index){       
-              dataArray[0]+=toInteger(item.ftp_21);
-              dataArray[1]+=toInteger(item.telnet_23);
-              dataArray[2]+=toInteger(item.http_80);
-              dataArray[3]+=toInteger(item.smtp_25);
-              dataArray[4]+=toInteger(item.pop3_110);
-              dataArray[5]+=toInteger(item.elseport);
-            });
-            var str =  req.query.callback + '(' + JSON.stringify(dataArray) + ')';//jsonp  
-            res.end(str);
-          });
-        }      
-      break;
-    }
-    case "packagePer":{      
-      db.query("select * from packetdistribution where time >=? and time <=?",[req.query.start,req.query.end],function(err,results){
-        var dataArray = new Array(0,0,0,0,0,0,0,0,0,0);
-        if(err) return next(err);
-        if(!results) return res.send(404);
-        if (req.query && req.query.callback) {
-          results.forEach(function(item,index){           
-            dataArray[0]+=toInteger(item.size_40);
-            dataArray[1]+=toInteger(item.size_41);
-            dataArray[2]+=toInteger(item.size_54);
-            dataArray[3]+=toInteger(item.size_55);
-            dataArray[4]+=toInteger(item.size_61);
-            dataArray[5]+=toInteger(item.size_101);
-            dataArray[6]+=toInteger(item.size_257);
-            dataArray[7]+=toInteger(item.size_513);
-            dataArray[8]+=toInteger(item.size_1025);
-            dataArray[9]+=toInteger(item.size_1500);
-          });
-          var str =  req.query.callback + '(' + JSON.stringify(dataArray) + ')';//jsonp  
-          res.end(str);
-        }  
-      });
-      break;
-    }
-  }
-  
-});*/
-
-/*app.get('/excel', function(req, res,next){
-  var conf ={};
-  var confrowdata=new Array();
-  var ptype = req.query.ptype;
-  var start = toInteger(req.query.start);
-  var end = toInteger(req.query.end);
-  // uncomment it for style example  
-  // conf.stylesXmlFile = "styles.xml";
-  switch (req.query.ptype){
-    case "packagePer":{
-      var dataArray = new Array(0,0,0,0,0,0,0,0,0,0);    
-      db.query("select * from capture_traffic where t_id =? and port_id =? and net_pro =? and time >=? and time <=?",[req.query.start,req.query.end],function(err,results){ 
-        if(err) return next(err);
-        if(!results) return res.send(404);
-        results.forEach(function(item,index){       
-          dataArray[0]+=toInteger(item.size_40);
-          dataArray[1]+=toInteger(item.size_41);
-          dataArray[2]+=toInteger(item.size_54);
-          dataArray[3]+=toInteger(item.size_55);
-          dataArray[4]+=toInteger(item.size_61);
-          dataArray[5]+=toInteger(item.size_101);
-          dataArray[6]+=toInteger(item.size_257);
-          dataArray[7]+=toInteger(item.size_513);
-          dataArray[8]+=toInteger(item.size_1025);
-          dataArray[9]+=toInteger(item.size_1500);
-        });
-        var rowdata =new Array();
-        rowdata.push(start);
-        rowdata.push(end);
-        dataArray.forEach(function(item, index){       
-          rowdata.push(item);         
-        }); 
-        confrowdata.push(rowdata);
-        conf.rows = confrowdata;
-        conf.cols = [{
-          caption:'开始时间',   
-          type:'string',
-          width:60
-        },{
-            caption:'结束时间',
-            type:'string',
-            width:60
-        },
-        {
-            caption:'40字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'41~53字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'54字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'55~61字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'61~100字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'101~256字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'257~512字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'513~1024字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'1025~1499字节',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'1500字节',  
-            type:'number',
-            width:20
-        }];
-        var result = nodeExcel.execute(conf);
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-        res.setHeader('charset', 'utf-8');
-        res.setHeader("Content-Disposition", "attachment; filename="+"packetdistribution.xlsx");
-        res.end(result, 'binary');
-      }); 
-      break;
-    }
-    case "portPer":{
-      var dataArray = new Array(0,0,0,0,0,0);          
-      db.query("select * from portdistribution where time >=? and time <=?",[req.query.start,req.query.end],function(err,results){ 
-        if(err) return next(err);
-        if(!results) return res.send(404);
-        results.forEach(function(item,index){       
-          dataArray[0]+=toInteger(item.ftp_21);
-          dataArray[1]+=toInteger(item.telnet_23);
-          dataArray[2]+=toInteger(item.http_80);
-          dataArray[3]+=toInteger(item.smtp_25);
-          dataArray[4]+=toInteger(item.pop3_110);
-          dataArray[5]+=toInteger(item.elseport);
-        });
-        var rowdata =new Array();
-        rowdata.push(start);
-        rowdata.push(end);
-        dataArray.forEach(function(item, index){         
-            rowdata.push(item);
-        });
-        confrowdata.push(rowdata);
-        conf.rows=confrowdata;
-        conf.cols = [{
-          caption:'开始时间',   
-          type:'string',
-          width:60
-        },{
-            caption:'结束时间',
-            type:'string',
-            width:60
-        },
-        {
-            caption:'ftp',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'http',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'telnet',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'smtp',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'pop3',  
-            type:'number',
-            width:20
-        },
-        {
-            caption:'其他端口',  
-            type:'number',
-            width:20
-        }];
-        var result = nodeExcel.execute(conf);
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-        res.setHeader('charset', 'utf-8');
-        res.setHeader("Content-Disposition", "attachment; filename="+"portdistribution.xlsx");
-        res.end(result, 'binary');
-      }); 
-      break;
-    }
-    default:{
-      var fileName ={packageNum:"packet",trafficNum:"traffic",fragment:"fragment",ack:"ack",syn:'syn',fin:"fin",syn_ack:"syn_ack"};
-      var value=new Array();
-      if(req.query){
-        var step = toInteger(req.query.step);
-        var queryStr = "select "+ptype+" from feature where time >="+start+" and time <="+end;
-        db.query(queryStr,function(err,results){
-          if(err) return next(err);
-          if(!results) return res.send(404);     
-          var i=-1;
-          var num;
-          value[0]=results[0][ptype];
-          results.forEach(function(item, index){            
-              if(index%step){
-                num++;
-                value[i] += toInteger(item[ptype]);
-                if(index==results.length-1){value[i]=value[i]/num}
-              }else{
-                i++;               
-                value[i] = toInteger(item[ptype]);
-                if(i-1>=0){value[i-1]=value[i-1]/num;} 
-                num=1;              
-              }            
-          });     
-          value.forEach(function(item, index){
-            var rowdata =new Array();
-            rowdata.push(start+index*step);
-            rowdata.push(start+index*step+step-1);
-            rowdata.push(step);
-            rowdata.push(item);
-            console.log(rowdata)
-            confrowdata.push(rowdata);
-          });
-         
-          conf.rows = confrowdata;
-          conf.cols = [{
-            caption:'开始时间',   
-            type:'string',
-            width:60
-          },{
-              caption:'结束时间',
-              type:'string',
-              width:60
-          },{
-              caption:'步长',
-              type:'number',
-              width:20
-          },
-          {
-              caption:'数据',  
-              type:'number',
-              width:20
-          }];
-          var result = nodeExcel.execute(conf);
-          res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-          res.setHeader('charset', 'utf-8');
-          res.setHeader("Content-Disposition", "attachment; filename=" + fileName[ptype]+".xlsx");
-          res.end(result, 'binary');
-      });
-    }
-
-    }//end of default
-  }
-});*/
  
 //链接数据库
 var db = mysql.createClient(config);
