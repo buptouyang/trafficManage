@@ -1,6 +1,6 @@
 var routeApp = angular.module('mainContent',['ngRoute']);
-var legendText =['特征',"流量大小特征(单位:MB)","包数特征(单位:个)","五元组","分片","包长分布(单位:百分百)"];
-var nameSeries = {size:'流量大小(MB)',pkt:'包数(个)',tuple:'五元组(个)',frag:'分片(个)'};
+var legendText =['特征',"流量大小特征(MB/S)","包数特征(个)","五元组","分片","包长分布(百分比)"];
+var nameSeries = {size:'流量大小(MB/S)',pkt:'包数(个)',tuple:'五元组(个)',frag:'分片(个)'};
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
 	.when('/trafficManage',{
@@ -15,8 +15,8 @@ routeApp.config(['$routeProvider',function($routeProvider){
 		templateUrl:'tpl/machineManage.html',
 		controller:'machineCtl'
 	})
-/*	.other({
-
+	/*.other({
+		redirectTo:'/index.html'
 	});*/
 }]); 
 
@@ -121,7 +121,8 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 					$.each(data.dataList,function(index,item){
 						//item.end = NormalDate(UTCDay(item.start)+parseInt(item.end,10));
 						item.status = statusArray[item.status];
-						item.descript = item.descript?unescape(item.descript):'';
+						item.name = item.name?item.name:'';
+						item.descript = item.descript?item.descript:'';
 					});
 					$scope.$apply(function(){
 						$scope.infos = data.dataList;	
@@ -149,10 +150,10 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	$scope.getList('',1);
 	$scope.page = 1;	
 	$("#newTask").click(function(e){
-		var name = $("#taskName").val();
+		var name = $("#taskName").val().substring(0,120);
 		$scope.taskInfo.type = 1;      //$("input[name='machineType']").val();
 		$scope.taskInfo.machine = $("#machineList").val();
-		$scope.taskInfo.desc = escape($('#desc').val());
+		$scope.taskInfo.desc = $('#desc').val().substring(0,120);
 		//开始时间
 		if($scope.taskInfo.execType == '1'){ //立即执行
 			$scope.taskInfo.start = 0;
@@ -200,7 +201,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 					}
 				});
 			}else{
-				$("#newModal .modal-body").append('<div class="form-group"><div class="col-sm-offset-2"><p class="text-danger">结束时间早于开始时间，请重新选择</p></div></div>');
+				$("#newModal .modal-body .text-danger").html('结束时间早于开始时间，请重新选择');
 			}
 		}else{
 			alert("任务名称必填");
@@ -208,7 +209,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	});
 	$("#geneNewTask").click(function(e){
 		$scope.geneTaskInfo.machine = $("#geneMachineList").val();
-		$scope.geneTaskInfo.name = $("#geneTaskName").val();
+		$scope.geneTaskInfo.name = $("#geneTaskName").val().substring(0,120);
 		//开始时间
 		if($scope.geneTaskInfo.execType == '1'){ //立即执行
 			$scope.geneTaskInfo.start = 0;
@@ -257,6 +258,8 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 
 	$('#newModal').on('show.bs.modal', function (event) {
 		//event.stopPropagation(); 
+		$("#newModal .modal-body .text-danger").html('');
+
 		if(event.target.id == 'endTime' || event.target.id == 'startTime'){
 
 		}else{
@@ -395,13 +398,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	                splitNumber:50000,
 	                axisLabel : {
 	                    formatter: function(value){
-	                    	return Math.round(value/1024/1024)+'MB';
+	                    	return Math.round(value);
 	                    	//Math.round(value)+'GB';
 	                    },
 	                    interval:1048576
 	                },
 	                splitArea : {show : true}
-	            },
+	            }/*,
 	            {
 		            type : 'value',
 		            splitNumber: 10,
@@ -413,7 +416,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		            splitLine : {
 		                show: false
 		            }
-		        }
+		        }*/
 	        ],
 	        series : []
 	    };
@@ -547,16 +550,16 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					    if(type=='0'){
 					    	$('.graph_content').css('display','block');
 					    	$('.right_content').css('display','none');
-					    	var option_size={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	var option_size={title:{text:"",padding:10},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
 					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
-					    	axisLabel:{formatter:function(value){return Math.round(value/1024/1024)+"MB"}},splitArea:{show:true}}],series:[]};
-					    	var option_pkt={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
-					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
-					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
-					    	var option_tuple={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	axisLabel:{formatter:function(value){return Math.round(value/1024/1024)}},splitArea:{show:true}}],series:[]};
+					    	var option_pkt={title:{text:"",padding:10},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
 					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
 					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
-					    	var option_frag={title:{text:"",padding:10,},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	var option_tuple={title:{text:"",padding:10},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
+					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+					    	var option_frag={title:{text:"",padding:10},tooltip:{trigger:"item"},legend:{data:[]},toolbox:{show:false},calculable:true,
 					    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
 					    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
 					    	var totalseries={size:[],pkt:[],tuple:[],frag:[]};
@@ -608,7 +611,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 								{
 							        title : {
 							            text: '',
-							            padding:10,
+							            padding:10
 							        },
 							        tooltip : {
 							            trigger: 'item'
@@ -632,7 +635,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 							                type : 'value',
 							                axisLabel : {
 							                    formatter: function(value){
-							                    	return Math.round(value/1024/1024)+'MB';
+							                    	return Math.round(value/1024/1024);
 							                    }
 							                },
 							                splitArea : {show : true}
@@ -656,7 +659,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 										option_real.yAxis[0].axisLabel={formatter: '{value}'};
 									}else{
 										option_real.yAxis[0].axisLabel={formatter: function(value){
-							                    	return Math.round(value/1024/1024)+'MB';
+							                    	return Math.round(value/1024/1024);
 							                    }};
 									}
 									legend.push(nameSeries[index]);
@@ -744,8 +747,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	window.open("/exceldata?start="+startTime+"&end="+endTime+"&port="+port+"&ctype="+ctype+"&transPro="+transPro+"&netPro="+netPro+"&tId="+tId+"&total="+totalBoolean+"&scale="+timeScale);
 	});
     $('#searchNum').click(function(){
-    	$('.graph_content').css('display','none');
-		$('.right_content').css('display','block');
     	myChart?myChart.clear():'';
     	$("#watch").css("background-color","#f0ad4e");
     	if(watch){
@@ -824,37 +825,94 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				myChart?myChart.clear():'';
 				myChart.setOption(option_pie);
 			}else{
-				var formalTime = UTCDay($scope.mstartTime);
-				var legend = [],totalseries = [];
-				$scope.lenArray[0].len = data.dataList['size'].length;
-				$.each(data.dataList,function(index,item){
-					if(index != 'time' && item.length > 0){
-						var lineSeries = {
-				            name:'',
-				            type:'line',
-				            data:[]
-				        };
-						lineSeries.data = item;
-						lineSeries.name = nameSeries[index];
-						if(index == 'tuple' || index == 'frag' || index == 'pkt'){
-							lineSeries.yAxisIndex = 1;
-						}
-						legend.push(nameSeries[index]);
-						totalseries.push(lineSeries);
-						if(totalBoolean && type != '0'){
-							option_line.title.subtext='总量:'+lineSeries.data[lineSeries.data.length-1];
-						}else{
-							option_line.title.subtext='';
-						}
-					}	
-				});
-				$.each(data.dataList.time,function(index,item){
-					timeData.push(NormalDate(formalTime+parseInt(item,10)));		
-				});
-				
-				initOption(option_line,legendText[type],legend,timeData,totalseries);
-				myChart?myChart.clear():'';
-				myChart.setOption(option_line);
+				if(type == '0'){
+					$('.graph_content').css('display','block');
+					$('.right_content').css('display','none');
+					var option_size={title:{text:"",padding:10},tooltip:{trigger:"item"},dataZoom:{show:true,realtime:true,start:0,end:100},legend:{data:[]},toolbox:{show:false},calculable:true,
+			    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+			    	axisLabel:{formatter:function(value){return Math.round(value/1024/1024)}},splitArea:{show:true}}],series:[]};
+			    	var option_pkt={title:{text:"",padding:10},tooltip:{trigger:"item"},dataZoom:{show:true,realtime:true,start:0,end:100},legend:{data:[]},toolbox:{show:false},calculable:true,
+			    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+			    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+			    	var option_tuple={title:{text:"",padding:10},tooltip:{trigger:"item"},dataZoom:{show:true,realtime:true,start:0,end:100},legend:{data:[]},toolbox:{show:false},calculable:true,
+			    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+			    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+			    	var option_frag={title:{text:"",padding:10},tooltip:{trigger:"item"},dataZoom:{show:true,realtime:true,start:0,end:100},legend:{data:[]},toolbox:{show:false},calculable:true,
+			    	xAxis:[{type:"category",data:[""]}],yAxis:[{type:"value",
+			    	axisLabel:{formatter:function(value){return Math.round(value)}},splitArea:{show:true}}],series:[]};
+			    	var totalseries={size:[],pkt:[],tuple:[],frag:[]};
+			    	var timeData = [];
+					var formalTime = UTCDay($scope.mstartTime);
+					var sizeChart = echarts.init(document.getElementById('sizeChart'));
+					var pktChart = echarts.init(document.getElementById('pktChart'));
+					var tupleChart = echarts.init(document.getElementById('tupleChart'));
+					var fragChart = echarts.init(document.getElementById('fragChart'));
+					$.each(data.dataList,function(index,item){
+						if(index != 'time' && item.length > 0){
+							var lineSeries = {
+					            name:'',
+					            type:'line',
+					            data:[]
+					        };
+							lineSeries.data = item;
+							lineSeries.name = nameSeries[index];
+							totalseries[index].push(lineSeries);
+						}		
+					});
+					$.each(data.dataList.time,function(index,item){
+						timeData.push(NormalDate(formalTime+parseInt(item,10)));		
+					});
+					initOption(option_size,legendText[1],[$scope.trafficName],timeData,totalseries['size']);
+					initOption(option_pkt,legendText[2],[$scope.trafficName],timeData,totalseries['pkt']);
+					initOption(option_tuple,legendText[3],[$scope.trafficName],timeData,totalseries['tuple']);
+					initOption(option_frag,legendText[4],[$scope.trafficName],timeData,totalseries['frag']);
+					sizeChart?sizeChart.clear():'';
+					pktChart?pktChart.clear():'';
+					tupleChart?tupleChart.clear():'';
+					fragChart?fragChart.clear():'';
+					sizeChart.setOption(option_size);
+					pktChart.setOption(option_pkt);
+					tupleChart.setOption(option_tuple);
+					fragChart.setOption(option_frag);
+				}else{
+					$('.graph_content').css('display','none');
+					$('.right_content').css('display','block');
+					var formalTime = UTCDay($scope.mstartTime);
+					var legend = [],totalseries = [];
+					$scope.lenArray[0].len = data.dataList['size'].length;
+					$.each(data.dataList,function(index,item){
+						if(index != 'time' && item.length > 0){
+							var lineSeries = {
+					            name:'',
+					            type:'line',
+					            data:[]
+					        };
+							lineSeries.data = item;
+							lineSeries.name = nameSeries[index];
+							if(index == 'size'){
+								option_line.yAxis[0].axisLabel.formatter=function(value){
+									return Math.round(value/1024/1024);
+								}
+							}else{
+								option_line.yAxis[0].axisLabel.formatter=function(value){
+									return Math.round(value);
+								}
+							}
+							totalseries.push(lineSeries);
+							if(totalBoolean && type != '0'){
+								option_line.title.subtext='总量:'+lineSeries.data[lineSeries.data.length-1];
+							}else{
+								option_line.title.subtext='';
+							}
+						}	
+					});
+					$.each(data.dataList.time,function(index,item){
+						timeData.push(NormalDate(formalTime+parseInt(item,10)));		
+					});				
+					initOption(option_line,legendText[type],[$scope.trafficName],timeData,totalseries);
+					myChart?myChart.clear():'';
+					myChart.setOption(option_line);
+				}
 			}
         }); //end of click
     });
@@ -874,12 +932,14 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			obj.desc=$(parentEle[1]).text();
 			obj.start=$(parentEle[2]).text();
 			obj.end=$(parentEle[3]).text()
-			
+			var port = $('#cp_portId').val();
+			var netPro = $('#cp_netPro').val();
+			var transPro = $('#cp_transPro').val();
 			$.ajax({
 				url:'/trafficAll',
 				type:'POST',
 				dataType:'json',
-				data:{type:type,id:obj.id,total:totalBoolean},
+				data:{type:type,id:obj.id,total:totalBoolean,port:port,netPro:netPro,transPro:transPro},
 				success:function(data){
 					if(data.status==0){
 						var dataValue = [],timeValue = [];
@@ -893,7 +953,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 									name:obj.name,
 									type:'pie',
 									data:[],
-									radius:[outRadius,outRadius+30],
+									radius:[outRadius,outRadius+30]
 								};
 							$.each(data.dataList,function(index,item){
 						  		for(name in item){
@@ -1216,7 +1276,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 								item.comdisable = false;
 							}
 						});
-						item.descript = unescape(item.descript);	
+						item.name = item.name;	
+						item.descript = item.descript;	
 					});
 					//console.log(data.dataList)
 					$scope.$apply(function(){

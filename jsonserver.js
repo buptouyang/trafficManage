@@ -308,7 +308,6 @@ app.get('/exceldata', function(req, res,next){
     } else {  //有结果
       var wstart,wend;
       db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
-        console.log(timeResults)
         var formalTime = timeResults[0].t_start;
         //var tendTime = formalTime+timeResults[0].t_end;
         var tendTime = timeResults[0].t_end;
@@ -415,23 +414,15 @@ app.get('/exceldata', function(req, res,next){
               caption:'时刻',   
               type:'string',
               width:60
-              },/*{
-                  caption:'结束时间',
-                  type:'string',
-                  width:60
-              },*//*{
-                  caption:'步长',
-                  type:'number',
-                  width:20
-              },*/
+              },
               {
-                  caption:'数据(单位：byte)',  
+                  caption:'数据',  
                   type:'number',
                   width:20
             }];
-            if(queryObj.type == '1'){
-              conf.cols[1].caption = '数据';
-            }else if(queryObj.type == '3' || queryObj.type =='2' || queryObj.type =='4'){
+            if(queryObj.ctype == '1'){
+              conf.cols[1].caption = '数据(单位：byte/s)';
+            }else if(queryObj.ctype == '3' || queryObj.ctype =='2' || queryObj.ctype =='4'){
               conf.cols[1].caption = '数据(单位：个)';
             }//非饼状
           }else{ //所有           
@@ -477,19 +468,28 @@ app.get('/exceldata', function(req, res,next){
           }
           //解决中文乱码
           var userAgent = (req.headers['user-agent']||'').toLowerCase();
-          if(userAgent.indexOf('msie') >= 0 || userAgent.indexOf('chrome') >= 0) {
-              res.setHeader('Content-Disposition', 'attachment; filename=' + timeResults[0].t_name +'__' +encodeURIComponent(typeArray[queryObj.ctype]) +wstart+"__"+wend+".xlsx");
+          console.log(userAgent)
+          /*if(userAgent.indexOf('trident') >= 0 || userAgent.indexOf('chrome') >= 0) {
+            console.log('chrome')
+            res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
           } else if(userAgent.indexOf('firefox') >= 0) {
-              res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(typeArray[queryObj.ctype])+wstart+'__'+wend+'.xlsx"');
+            console.log('firefox')
+            res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
           } else {
-              //safari等其他非主流浏览器只能呵呵了 
-              res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(typeArray[queryObj.ctype]).toString('binary')+wstart+"__"+wend+".xlsx");
+            //safari等其他非主流浏览器只能呵呵了 
+            console.log('else');
+            res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
+            //res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(timeResults[0].t_name).toString('binary')+typeArray[queryObj.ctype]+wstart+"__"+wend+".xlsx");
+          }*/
+          if(userAgent.indexOf('firefox') >= 0) {
+            console.log('firefox')
+            res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
+          }else{
+           res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");           
           }
-          console.log(conf)
           var excelResult = nodeExcel.execute(conf);
           res.setHeader('Content-Type', 'application/vnd.openxmlformats');
           res.setHeader('charset', 'GB2312');
-          //res.setHeader("Content-Disposition", "attachment; filename="+encodeURIComponent(typeArray[type])+wstart+"__"+wend+".xlsx");
           res.end(excelResult, 'binary');
         });
       }
@@ -676,7 +676,6 @@ app.post('/realTime', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:{size:[],pkt:[],tuple:[],frag:[],time:[]}};
             data.dataList = fomatResult(results);
-            console.log(data.dataList)
             for (value in data.dataList){
               data.dataList[value] = data.dataList[value].reverse();
             }
@@ -687,7 +686,8 @@ app.post('/realTime', function(req, res,next){
 });
 app.post('/trafficAll', function(req, res,next){
   var queryExpression = 'select';
-  var type = toInteger(req.body.type);
+  var queryObj = req.body;
+  var type = toInteger(queryObj.type);
   switch(type){
     case 1:queryExpression +=" sum(traffic_size) as sumData";break;
     case 2:queryExpression +=" sum(pkt_num) as sumData";break;
@@ -696,6 +696,11 @@ app.post('/trafficAll', function(req, res,next){
     case 5:queryExpression +=" sum(size_1_53) as 1byte_53byte,sum(size_54_79) as 54byte_79byte,sum(size_80_159) as 80byte_159byte,sum(size_160_319) as 160byte_319byte,sum(size_320_639) as 320byte_639byte,sum(size_640_1279) as 640byte_1279byte,sum(size_1280_1518) as 1280byte_1518byte,sum(size_1519) as 1519byte_above";break;
   }
   queryExpression+=",c_time as time from capture_traffic where t_id="+req.body.id;//+"and t_start >"+req.body.start+" and t_end<"+req.body.end;
+  queryObj.port?(queryExpression+=" and port_id ="+queryObj.port):'';
+  queryObj.netPro?(queryExpression+=" and net_pro ="+queryObj.netPro):'';
+  if(queryObj.netPro != '' && queryObj.netPro != '2'){
+    queryObj.transPro?(queryExpression+=" and trans_pro="+queryObj.transPro):'';
+  }
   if(type != 5){
     queryExpression +=" group by c_time";
   }
@@ -816,13 +821,13 @@ app.post('/newTask', function(req, res,next){
   console.log(queryExpression);
   db.query(queryExpression,function(err,results){
     if(err){
-      if(err.message == "Duplicate entry 'traffic' for key 't_name_UNIQUE'"){
+      if(/Duplicate entry '.*' for key 't_name_UNIQUE'/.test(err.message)){
         var data={'status':1,message:"任务名称重复，请重新输入"};
         var str =  JSON.stringify(data); 
         res.end(str);
-      }    
-      console.log('插入记录出错:'+err.message);
-      return next(err);
+        console.log('插入记录出错:'+err.message);
+      } 
+      return next(err);         
     } else {
       var data={'status':0,message:"新建成功"};
       var str =  JSON.stringify(data); 
