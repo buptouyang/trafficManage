@@ -6,10 +6,14 @@ var urllib = require('url');
 var path = require('path');
 var mysql = require('mysql');
 var config = require('./config');
+var bodyParser = require('body-parser');
 var port = 3000;  
 var typeArray =['total',"traffic","package","tuple","fragment","packetdistribution"];
 app.use(express.static(path.join(__dirname,'public')));
-app.use(express.bodyParser());
+// parse application/x-www-form-urlencoded  
+app.use(bodyParser.urlencoded({ extended: false }));    
+// parse application/json  
+app.use(bodyParser.json()); 
 /*app.get('/',function(req,res,next){
  res.send('hello')
 });*/
@@ -32,7 +36,8 @@ function UTCDay(daystring) {
 app.post('/login', function(req, res,next){
   console.log(req.body);
   var queryExpression="select * from user where user='"+req.body.uid+"'";
-  db.query(queryExpression,function(err,results){
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
       if(err) return next(err);
       if(!results[0]){
         var message={'status':1,'message':"用户名不存在"};
@@ -52,7 +57,10 @@ app.post('/login', function(req, res,next){
           res.end(str);
         }
       }
+      connection.release();
+    });
   });
+  
 });
 function toInteger(str) {
   var res = parseInt(str, 10)
@@ -84,64 +92,69 @@ app.post('/trafficDetail', function(req, res,next){
     queryExpression +=" group by c_time";
   }
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-    console.log(results.length);
-      if(err) return next(err);
-        if(!results[0] || results[0].time == null ){ //无查询结果 
-            var message={'status':1,'message':"无查询结果"};
-            var str =  JSON.stringify(message);
-            res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-            res.end(str);
-        } else {  //有结果
-            var data={'status':0,dataList:{size:[],pkt:[],tuple:[],frag:[],time:[]}};
-            if(type == 5){
-              data.dataList = results;
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      console.log(results.length);
+        if(err) return next(err);
+          if(!results[0] || results[0].time == null ){ //无查询结果 
+              var message={'status':1,'message':"无查询结果"};
+              var str =  JSON.stringify(message);
+              res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+              res.end(str);
+          } else {  //有结果
+              var data={'status':0,dataList:{size:[],pkt:[],tuple:[],frag:[],time:[]}};
+              if(type == 5){
+                data.dataList = results;
+                var str =  JSON.stringify(data); 
+                res.end(str);
+                return false;
+              }
+              var totalValue;
+              //var totalValue={size:[],pkt:[],tuple:[],frag:[],time:[]};
+              var tempValue = {size:0,pkt:0,tuple:0,frag:0};
+              if(queryObj.total == 'true'){    //累积
+                totalValue = totalUpNew(results);
+                if(scale > 1){
+                  var searchPointLen = totalValue['time'].length;
+                  if(scale > searchPointLen){  //时间尺度
+                    data.dataList.time.push(totalValue.time[searchPointLen-1]);
+                    for(value in totalValue){
+                      if(totalValue[value].length != 0 && value != 'time'){
+                        data.dataList[value].push(totalValue[value][searchPointLen-1]);
+                      }
+                    }
+                  }else{
+                    for(var k=(scale-1);k<searchPointLen;k+=scale){
+                        data.dataList.time.push(totalValue.time[k]);
+                        for(value in totalValue){
+                          if(totalValue[value].length != 0 && value != 'time'){
+                            data.dataList[value].push(totalValue[value][k]);
+                          }
+                        }                          
+                    }
+                  } 
+                }else{
+                  data.dataList = totalValue;               
+                }
+                var str =  JSON.stringify(data); 
+                res.end(str);           
+              }else{
+                if(scale > 1){
+                  var value = {};
+                  value = scaleUpNew(scale,fomatResult(results),0);
+                  data.dataList = value;
+                }else{
+                  data.dataList = fomatResult(results);
+                }             
+              }            
               var str =  JSON.stringify(data); 
               res.end(str);
-              return false;
-            }
-            var totalValue;
-            //var totalValue={size:[],pkt:[],tuple:[],frag:[],time:[]};
-            var tempValue = {size:0,pkt:0,tuple:0,frag:0};
-            if(queryObj.total == 'true'){    //累积
-              totalValue = totalUpNew(results);
-              if(scale > 1){
-                var searchPointLen = totalValue['time'].length;
-                if(scale > searchPointLen){  //时间尺度
-                  data.dataList.time.push(totalValue.time[searchPointLen-1]);
-                  for(value in totalValue){
-                    if(totalValue[value].length != 0 && value != 'time'){
-                      data.dataList[value].push(totalValue[value][searchPointLen-1]);
-                    }
-                  }
-                }else{
-                  for(var k=(scale-1);k<searchPointLen;k+=scale){
-                      data.dataList.time.push(totalValue.time[k]);
-                      for(value in totalValue){
-                        if(totalValue[value].length != 0 && value != 'time'){
-                          data.dataList[value].push(totalValue[value][k]);
-                        }
-                      }                          
-                  }
-                } 
-              }else{
-                data.dataList = totalValue;               
-              }
-              var str =  JSON.stringify(data); 
-              res.end(str);           
-            }else{
-              if(scale > 1){
-                var value = {};
-                value = scaleUpNew(scale,fomatResult(results),0);
-                data.dataList = value;
-              }else{
-                data.dataList = fomatResult(results);
-              }             
-            }            
-            var str =  JSON.stringify(data); 
-            res.end(str);
-        }
-    });   
+          }
+          connection.release();
+      }); 
+  });
+
+      
 });
 function searchData(reqparam,callback){
   console.log(reqparam);
@@ -169,9 +182,12 @@ function searchData(reqparam,callback){
     queryExpression +=" group by c_time";
   }
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-    callback(err,results);
-  });
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      callback(err,results);
+      connection.release();
+    });
+  });  
 }
 
 function isArrayFun(arr){
@@ -307,191 +323,195 @@ app.get('/exceldata', function(req, res,next){
         res.end(str);
     } else {  //有结果
       var wstart,wend;
-      db.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
-        var formalTime = timeResults[0].t_start;
-        //var tendTime = formalTime+timeResults[0].t_end;
-        var tendTime = timeResults[0].t_end;
-        var conf ={};
-        var confrowdata=new Array();
-        if(queryObj.start!=0 ){
-          wstart = NormalDate(formalTime+toInteger(queryObj.start)).replace(/[\/\:]/g,'-');
-        }else{
-          wstart = NormalDate(formalTime).replace(/[\/\:]/g,'-');
-        }
-        if(queryObj.end!=0){
-          wend = NormalDate(formalTime+toInteger(queryObj.end)).replace(/[\/\:]/g,'-');
-        }else{
-          wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
-        }
-        if(queryObj.ctype == '5'){   //包分布
-            var rowdata =new Array();
-            if(queryObj.start!=0 ){
-              wstart = NormalDate(formalTime+toInteger(queryObj.start));
-              rowdata.push(wstart);
-            }else{
-              wstart = NormalDate(formalTime);
-              rowdata.push(wstart);
-            }
-            if(queryObj.end!=0){
-              wend = NormalDate(formalTime+toInteger(queryObj.end));
-              rowdata.push(wend);
-            }else{
-              wend = NormalDate(tendTime);
-              rowdata.push(wend);
-            }
-            for(value in results[0]){
-              if(value != 'time'){
-                rowdata.push(results[0][value]); 
-              }              
-            }
-            confrowdata.push(rowdata);
-            conf.rows = confrowdata;
-            conf.cols = [{
-              caption:'开始时间',   
-              type:'string',
-              width:60
-            },{
-                caption:'结束时间',
+      pool.getConnection(function(err, connection) {
+        connection.query('select t_start,t_end,t_name from traffic_info where t_id='+queryObj.tId,function(err,timeResults){
+          var formalTime = timeResults[0].t_start;
+          //var tendTime = formalTime+timeResults[0].t_end;
+          var tendTime = timeResults[0].t_end;
+          var conf ={};
+          var confrowdata=new Array();
+          if(queryObj.start!=0 ){
+            wstart = NormalDate(formalTime+toInteger(queryObj.start)).replace(/[\/\:]/g,'-');
+          }else{
+            wstart = NormalDate(formalTime).replace(/[\/\:]/g,'-');
+          }
+          if(queryObj.end!=0){
+            wend = NormalDate(formalTime+toInteger(queryObj.end)).replace(/[\/\:]/g,'-');
+          }else{
+            wend = NormalDate(tendTime).replace(/[\/\:]/g,'-');
+          }
+          if(queryObj.ctype == '5'){   //包分布
+              var rowdata =new Array();
+              if(queryObj.start!=0 ){
+                wstart = NormalDate(formalTime+toInteger(queryObj.start));
+                rowdata.push(wstart);
+              }else{
+                wstart = NormalDate(formalTime);
+                rowdata.push(wstart);
+              }
+              if(queryObj.end!=0){
+                wend = NormalDate(formalTime+toInteger(queryObj.end));
+                rowdata.push(wend);
+              }else{
+                wend = NormalDate(tendTime);
+                rowdata.push(wend);
+              }
+              for(value in results[0]){
+                if(value != 'time'){
+                  rowdata.push(results[0][value]); 
+                }              
+              }
+              confrowdata.push(rowdata);
+              conf.rows = confrowdata;
+              conf.cols = [{
+                caption:'开始时间',   
                 type:'string',
                 width:60
-            },
-            {
-                caption:'1字节~53字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'54~79字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'80字节~159字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'160字节~319字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'320字节~639字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'640字节~1279字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'1280字节~1518字节(单位：个)',  
-                type:'number',
-                width:60
-            },
-            {
-                caption:'1519字节以上(单位：个)',  
-                type:'number',
-                width:60
-            }];
-          }else if(queryObj.ctype != '0'){  //其他线图
-            if(queryObj.total == 'true'){
-              results = totalUp(results);
-              results = scaleUp(queryObj.scale,results);
-            }else{
-              results = scaleUp(queryObj.scale,results);
-            } 
-            results.forEach(function(item, index){
-              var rowdata =new Array();    
-              rowdata.push(NormalDate(formalTime+toInteger(item.time)));
-              //rowdata.push(NormalDate(toInteger(item.time)));
-              rowdata.push(item.sumData);
-              confrowdata.push(rowdata);
-            });
-            conf.rows = confrowdata;
-            conf.cols = [{
-              caption:'时刻',   
-              type:'string',
-              width:60
+              },{
+                  caption:'结束时间',
+                  type:'string',
+                  width:60
               },
               {
-                  caption:'数据',  
+                  caption:'1字节~53字节(单位：个)',  
                   type:'number',
-                  width:20
-            }];
-            if(queryObj.ctype == '1'){
-              conf.cols[1].caption = '数据(单位：byte/s)';
-            }else if(queryObj.ctype == '3' || queryObj.ctype =='2' || queryObj.ctype =='4'){
-              conf.cols[1].caption = '数据(单位：个)';
-            }//非饼状
-          }else{ //所有           
-            if(queryObj.total == 'true'){
-              results = totalUpNew(results);
-              results = scaleUpNew(queryObj.scale,results,0);
-            }else{
-              results = fomatResult(results);
-              results = scaleUpNew(queryObj.scale,results,0);
-            } 
-            for(var i = 0;i<results['time'].length;i++){
-              var rowdata =new Array();
-              rowdata.push(NormalDate(formalTime+toInteger(results['time'][i])));
-              rowdata.push(results['size'][i]);
-              rowdata.push(results['pkt'][i]);
-              rowdata.push(results['tuple'][i]);
-              rowdata.push(results['frag'][i]);
-              confrowdata.push(rowdata);
+                  width:60
+              },
+              {
+                  caption:'54~79字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'80字节~159字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'160字节~319字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'320字节~639字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'640字节~1279字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'1280字节~1518字节(单位：个)',  
+                  type:'number',
+                  width:60
+              },
+              {
+                  caption:'1519字节以上(单位：个)',  
+                  type:'number',
+                  width:60
+              }];
+            }else if(queryObj.ctype != '0'){  //其他线图
+              if(queryObj.total == 'true'){
+                results = totalUp(results);
+                results = scaleUp(queryObj.scale,results);
+              }else{
+                results = scaleUp(queryObj.scale,results);
+              } 
+              results.forEach(function(item, index){
+                var rowdata =new Array();    
+                rowdata.push(NormalDate(formalTime+toInteger(item.time)));
+                //rowdata.push(NormalDate(toInteger(item.time)));
+                rowdata.push(item.sumData);
+                confrowdata.push(rowdata);
+              });
+              conf.rows = confrowdata;
+              conf.cols = [{
+                caption:'时刻',   
+                type:'string',
+                width:60
+                },
+                {
+                    caption:'数据',  
+                    type:'number',
+                    width:20
+              }];
+              if(queryObj.ctype == '1'){
+                conf.cols[1].caption = '数据(单位：byte/s)';
+              }else if(queryObj.ctype == '3' || queryObj.ctype =='2' || queryObj.ctype =='4'){
+                conf.cols[1].caption = '数据(单位：个)';
+              }//非饼状
+            }else{ //所有           
+              if(queryObj.total == 'true'){
+                results = totalUpNew(results);
+                results = scaleUpNew(queryObj.scale,results,0);
+              }else{
+                results = fomatResult(results);
+                results = scaleUpNew(queryObj.scale,results,0);
+              } 
+              for(var i = 0;i<results['time'].length;i++){
+                var rowdata =new Array();
+                rowdata.push(NormalDate(formalTime+toInteger(results['time'][i])));
+                rowdata.push(results['size'][i]);
+                rowdata.push(results['pkt'][i]);
+                rowdata.push(results['tuple'][i]);
+                rowdata.push(results['frag'][i]);
+                confrowdata.push(rowdata);
+              }
+              conf.rows = confrowdata;
+              conf.cols = [{
+                caption:'时刻',   
+                type:'string',
+                width:60
+                },{
+                    caption:'流量大小',
+                    type:'number',
+                    width:20
+                },{
+                    caption:'包数',
+                    type:'number',
+                    width:20
+                },{
+                    caption:'五元组',
+                    type:'number',
+                    width:20
+                },
+                {
+                    caption:'分片',  
+                    type:'number',
+                    width:20
+              }];
             }
-            conf.rows = confrowdata;
-            conf.cols = [{
-              caption:'时刻',   
-              type:'string',
-              width:60
-              },{
-                  caption:'流量大小',
-                  type:'number',
-                  width:20
-              },{
-                  caption:'包数',
-                  type:'number',
-                  width:20
-              },{
-                  caption:'五元组',
-                  type:'number',
-                  width:20
-              },
-              {
-                  caption:'分片',  
-                  type:'number',
-                  width:20
-            }];
-          }
-          //解决中文乱码
-          var userAgent = (req.headers['user-agent']||'').toLowerCase();
-          console.log(userAgent)
-          /*if(userAgent.indexOf('trident') >= 0 || userAgent.indexOf('chrome') >= 0) {
-            console.log('chrome')
-            res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
-          } else if(userAgent.indexOf('firefox') >= 0) {
-            console.log('firefox')
-            res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
-          } else {
-            //safari等其他非主流浏览器只能呵呵了 
-            console.log('else');
-            res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
-            //res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(timeResults[0].t_name).toString('binary')+typeArray[queryObj.ctype]+wstart+"__"+wend+".xlsx");
-          }*/
-          if(userAgent.indexOf('firefox') >= 0) {
-            console.log('firefox')
-            res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
-          }else{
-           res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");           
-          }
-          var excelResult = nodeExcel.execute(conf);
-          res.setHeader('Content-Type', 'application/vnd.openxmlformats');
-          res.setHeader('charset', 'GB2312');
-          res.end(excelResult, 'binary');
-        });
+            //解决中文乱码
+            var userAgent = (req.headers['user-agent']||'').toLowerCase();
+            console.log(userAgent)
+            /*if(userAgent.indexOf('trident') >= 0 || userAgent.indexOf('chrome') >= 0) {
+              console.log('chrome')
+              res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
+            } else if(userAgent.indexOf('firefox') >= 0) {
+              console.log('firefox')
+              res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
+            } else {
+              //safari等其他非主流浏览器只能呵呵了 
+              console.log('else');
+              res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");
+              //res.setHeader('Content-Disposition', 'attachment; filename=' + new Buffer(timeResults[0].t_name).toString('binary')+typeArray[queryObj.ctype]+wstart+"__"+wend+".xlsx");
+            }*/
+            if(userAgent.indexOf('firefox') >= 0) {
+              console.log('firefox')
+              res.setHeader('Content-Disposition', 'attachment; filename*="utf8\'\'' + encodeURIComponent(timeResults[0].t_name) +'__'+ typeArray[queryObj.ctype]+wstart+'__'+wend+'.xlsx"');
+            }else{
+             res.setHeader('Content-Disposition', 'attachment; filename=' + encodeURIComponent(timeResults[0].t_name) +'__' +typeArray[queryObj.ctype] +wstart+"__"+wend+".xlsx");           
+            }
+            var excelResult = nodeExcel.execute(conf);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats');
+            res.setHeader('charset', 'GB2312');
+            res.end(excelResult, 'binary');
+            connection.release();
+          });
+      });
+      
       }
   });
 });
@@ -500,37 +520,45 @@ app.get('/exceldata', function(req, res,next){
 app.get('/transInfo', function(req, res,next){
   var id = req.query.id || null;
   var queryExpression="select t.trans_name as name,t.trans_id as id from net_type n,trans_type t where t.trans_id=n.trans_id and n.net_id="+id;
-  console.log(queryExpression)
-  db.query(queryExpression,function(err,results){
-    console.log(results)
-    if(err){
-      console.log('无记录:'+err.message);
-      return next(err);
-    } else {
-      var data={'status':0,dataList:[]};
-      data.dataList = results;
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      console.log(results)
+      if(err){
+        console.log('无记录:'+err.message);
+        return next(err);
+      } else {
+        var data={'status':0,dataList:[]};
+        data.dataList = results;
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      }
+      connection.release();
+    });
   });
+  
 });
 
 //网络协议
 app.get('/netInfo', function(req, res,next){
   var queryExpression="select net_id as id,net_name as name from net_type group by net_id";
-  console.log(queryExpression)
-  db.query(queryExpression,function(err,results){
-    console.log(results);
-    if(err){
-      console.log('无记录:'+err.message);
-      return next(err);
-    } else {
-      var data={'status':0,dataList:[]};
-      data.dataList = results;
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      console.log(results);
+      if(err){
+        console.log('无记录:'+err.message);
+        return next(err);
+      } else {
+        var data={'status':0,dataList:[]};
+        data.dataList = results;
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      }
+      connection.release();
+    });
   });
+  
 });
 
 app.get('/trafficInfo', function(req, res,next){
@@ -542,72 +570,28 @@ app.get('/trafficInfo', function(req, res,next){
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
     queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC";*/
     var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,1 as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id group by t.t_id";
+    queryExpression+="from machine_info m,traffic_info t where t.m_id=m.m_id group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,2 as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(g.g_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC"
+    queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id order by id DESC ";
   }else{
    /* var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,t.t_type as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
     queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,g.g_type as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,g.g_end as end ";
     queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC";*/
     var queryExpression="select t.t_id as id,t.t_name as name,m.m_name as machine,1 as type,t.t_run_flag as status,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from machine_info m,traffic_info t left join capture_traffic c using(t_id) where t.m_id=m.m_id and t.t_name like'%"+req.query.queryStr+"%' group by t.t_id";
+    queryExpression+="from machine_info m,traffic_info t where t.m_id=m.m_id and t.t_name like'%"+req.query.queryStr+"%' group by t.t_id";
     queryExpression+=" UNION select g.g_id as id,g.g_name as name,m.m_name as machine,2 as type,g.g_run_flag as status,g.g_desc as descript,from_unixtime(g.g_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(g.g_end,'%Y/%m/%d %H:%i:%s') as end ";
     queryExpression+="from machine_info m,generate_traffic_info g where g.m_id=m.m_id and g.g_name like '%"+req.query.queryStr+"%' order by id DESC"
   }
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-   console.log(results.length);
-      if(err) return next(err);
-      if(!results[0]){ //无查询结果
-          var message={'status':0,'message':"无查询结果",dataList:[]};
-          var str =  JSON.stringify(message);
-          res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-          res.end(str);         
-      } else {  //有结果
-          var data={'status':0,dataList:[],totalPng:0};
-          results.forEach(function(item,index) {
-            if(item.end==null){
-              item.end = 0;
-            }
-            if(item.status == 2){
-              item.disable = true;
-            }else{
-              item.disable = false;
-            }
-            if(item.type == 2){
-              item.type = '生成';
-              item.cap = 'false';
-            }else{
-              item.type = '捕获';
-              item.cap = 'true';
-            }
-          });
-          data.totalPng = Math.ceil(results.length/10);
-          data.dataList=results.slice((page-1)*10,page*10);
-          var str =  JSON.stringify(data); 
-          res.end(str);
-      }
-  });
-});
-app.get('/trafficCap', function(req, res,next){
-  console.log(req.query);
-  var page = req.query.page;
-  if(req.query.queryStr == ''){
-    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-    queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";
-   
-  }else{
-    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-    queryExpression+="from traffic_info t left join capture_traffic c using(t_id) where t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
-    
-  }
-  console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-   console.log(results.length);
-      if(err) return next(err);
+  var time=new Date().getTime();
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+     console.log(new Date().getTime()-time)
+     console.log(results.length);
+        if(err) return next(err);
         if(!results[0]){ //无查询结果
-            var message={'status':1,'message':"无查询结果"};
+            var message={'status':0,'message':"无查询结果",dataList:[]};
             var str =  JSON.stringify(message);
             res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
             res.end(str);         
@@ -617,13 +601,72 @@ app.get('/trafficCap', function(req, res,next){
               if(item.end==null){
                 item.end = 0;
               }
+              if(item.status == 2){
+                item.disable = true;
+              }else{
+                item.disable = false;
+              }
+              if(item.type == 2){
+                item.type = '生成';
+                item.cap = 'false';
+              }else{
+                item.type = '捕获';
+                item.cap = 'true';
+              }
             });
             data.totalPng = Math.ceil(results.length/10);
             data.dataList=results.slice((page-1)*10,page*10);
             var str =  JSON.stringify(data); 
             res.end(str);
         }
+        connection.release();
+    });
   });
+  
+});
+app.get('/trafficCap', function(req, res,next){
+  console.log(req.query);
+  var page = req.query.page;
+  var time = new Date().getTime();
+  if(req.query.queryStr == ''){  
+    /*var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";*/
+    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic)";
+    //queryExpression+="from traffic_info t left join (select distinct c_time,t_id from testcenter0625.capture_traffic where t_id >0 order by c_time desc limit 1) c on t.t_id=c.t_id";
+   // queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";
+  }else{
+    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
+    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic) and t.t_name like '%"+req.query.queryStr+"%'";
+    //queryExpression+="from traffic_info t left join capture_traffic c using(t_id) where t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
+  }
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+     console.log(results.length);
+     console.log(new Date().getTime()-time);
+        if(err) return next(err);
+          if(!results[0]){ //无查询结果
+              var message={'status':1,'message':"无查询结果"};
+              var str =  JSON.stringify(message);
+              res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
+              res.end(str);         
+          } else {  //有结果
+              var data={'status':0,dataList:[],totalPng:0};
+              results.forEach(function(item,index) {
+                if(item.end==null){
+                  item.end = 0;
+                }
+              });
+              data.totalPng = Math.ceil(results.length/10);
+              data.dataList=results.slice((page-1)*10,page*10);
+              var str =  JSON.stringify(data); 
+              res.end(str);
+          }
+        connection.release();
+    });
+  });
+  
 });
 function fomatResult(results){
   var list = {size:[],pkt:[],tuple:[],frag:[],time:[]}
@@ -666,7 +709,8 @@ app.post('/realTime', function(req, res,next){
   queryExpression +=" group by c_time";
   queryExpression += ' order by c_time DESC limit 0,1000';
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
       if(err) return next(err);
         if(!results[0]){ //无查询结果
             var message={'status':1,'message':"无查询结果"};
@@ -682,7 +726,10 @@ app.post('/realTime', function(req, res,next){
             var str =  JSON.stringify(data); 
             res.end(str);
         }
+        connection.release();
   });
+  });
+  
 });
 app.post('/trafficAll', function(req, res,next){
   var queryExpression = 'select';
@@ -705,7 +752,8 @@ app.post('/trafficAll', function(req, res,next){
     queryExpression +=" group by c_time";
   }
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
       if(err) return next(err);
         if(!results[0]){ //无查询结果
           var message={'status':2,'message':"无查询结果"};
@@ -729,7 +777,10 @@ app.post('/trafficAll', function(req, res,next){
             var str =  JSON.stringify(data); 
             res.end(str);
         }
+        connection.release();
   });
+  });
+  
 });
 //查询机器
 app.post('/machineFunc', function(req, res,next){
@@ -740,55 +791,67 @@ app.post('/machineFunc', function(req, res,next){
     queryExpression += 'm_generate_flag=1';
   }
   queryExpression+=' and m_valid_flag=1';
-  console.log(queryExpression)
-  db.query(queryExpression,function(err,results){
-    console.log(results)
-    if(err) return next(err);
-    if(!results[0]){ //无查询结果
-      var message={'status':1,'message':"无查询结果"};
-      var str =  JSON.stringify(message);
-      res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
-      res.end(str);
-    } else {  //有结果
-        var data={'status':0,dataList:[]};
-        data.dataList=results;
-        var str =  JSON.stringify(data); 
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      console.log(results)
+      if(err) return next(err);
+      if(!results[0]){ //无查询结果
+        var message={'status':1,'message':"无查询结果"};
+        var str =  JSON.stringify(message);
+        res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
         res.end(str);
-    }
-  })
+      } else {  //有结果
+          var data={'status':0,dataList:[]};
+          data.dataList=results;
+          var str =  JSON.stringify(data); 
+          res.end(str);
+      }
+      connection.release();
+    })
+  });
+  
 });
 //新建机器
 app.post('/newMachine', function(req, res,next){
   var queryObj = req.body;
   var queryExpression = 'insert into machine_info(m_name,m_capture_flag,m_generate_flag,m_valid_flag) values("'+queryObj.machine+'",'+queryObj.capture;
   queryExpression+=','+queryObj.generate+','+queryObj.valid+')';
-  console.log(queryExpression)
-  db.query(queryExpression,function(err,results){
-    if(err){
-      console.log('插入记录出错:'+err.message);
-      return next(err);
-    } else {
-      var data={'status':0,dataList:[]};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      if(err){
+        console.log('插入记录出错:'+err.message);
+        return next(err);
+      } else {
+        var data={'status':0,dataList:[]};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      }
+      connection.release();
+    });
   });
+  
 });
 //修改机器
 app.post('/updateMachine', function(req, res,next){
   var queryObj = req.body;
   var queryExpression = 'update machine_info set m_capture_flag='+queryObj.capture+',m_generate_flag='+queryObj.generate+',m_valid_flag='+queryObj.valid+' where m_id='+queryObj.id;
-  console.log(queryExpression)
-  db.query(queryExpression,function(err,results){
-    if(err){
-      console.log('修改出错:'+err.message);
-      return next(err);
-    } else {
-      var data={'status':0,dataList:[]};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }
+  console.log(queryExpression);
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      if(err){
+        console.log('修改出错:'+err.message);
+        return next(err);
+      } else {
+        var data={'status':0,dataList:[]};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      }
+      connection.release();
+    });
   });
+  
 });
 //新建任务
 app.post('/newTask', function(req, res,next){
@@ -819,21 +882,25 @@ app.post('/newTask', function(req, res,next){
   var queryExpression = 'insert into traffic_info(m_id,t_name,t_type,t_start,t_end,t_desc,t_run_flag,t_period) values('+queryObj.machine+',"'+queryObj.name+'",'+queryObj.type+','+start+',';
   queryExpression+=end+',"'+queryObj.desc+'",0,'+queryObj.period+')';
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-    if(err){
-      if(/Duplicate entry '.*' for key 't_name_UNIQUE'/.test(err.message)){
-        var data={'status':1,message:"任务名称重复，请重新输入"};
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      if(err){
+        if(/Duplicate entry '.*' for key 't_name_UNIQUE'/.test(err.message)){
+          var data={'status':1,message:"任务名称重复，请重新输入"};
+          var str =  JSON.stringify(data); 
+          res.end(str);
+          console.log('插入记录出错:'+err.message);
+        } 
+        return next(err);         
+      } else {
+        var data={'status':0,message:"新建成功"};
         var str =  JSON.stringify(data); 
         res.end(str);
-        console.log('插入记录出错:'+err.message);
-      } 
-      return next(err);         
-    } else {
-      var data={'status':0,message:"新建成功"};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }  
-  })
+      }
+      connection.release();  
+    })
+  });
+  
 });
 //结束任务
 app.post('/stopTask', function(req, res,next){
@@ -844,19 +911,23 @@ app.post('/stopTask', function(req, res,next){
     queryExpression = 'update generate_traffic_info set g_run_flag=2 where g_id='+id;
   }  
   console.log(queryExpression);
-  db.query(queryExpression,function(err,results){
-    if(err){
-      console.log('任务结束出错:'+err.message);
-      var data={'status':1,message:'任务结束出错'};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-      return next(err);
-    } else{
-      var data={'status':0,dataList:[]};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-    }  
-  })
+  pool.getConnection(function(err, connection) {
+    connection.query(queryExpression,function(err,results){
+      if(err){
+        console.log('任务结束出错:'+err.message);
+        var data={'status':1,message:'任务结束出错'};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+        return next(err);
+      } else{
+        var data={'status':0,dataList:[]};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+      } 
+      connection.release(); 
+    })
+  });
+  
 });
 //生成流量
 app.post('/geneTraffic', function(req, res,next){
@@ -871,35 +942,43 @@ app.post('/geneTraffic', function(req, res,next){
       start = UTCDay(new Date()) + toInteger(queryObj.start);
     }
   }
-  db.query('select max(c_time) as end from capture_traffic where t_id = '+queryObj.id,function(err,results){
-    if(results[0].end == null){
-      console.log('生成出错');
-      var data={'status':1,message:'生成出错，请等待捕获完成'};
-      var str =  JSON.stringify(data); 
-      res.end(str);
-      return next(err);
-    }else{
-      var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'","'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id;
-      console.log(queryExpression);
-      db.query(queryExpression,function(err,results){
-        if(err){
-          console.log('生成出错:'+err.message);
-          var data={'status':1,message:'生成出错'};
-          var str =  JSON.stringify(data); 
-          res.end(str);
-          return next(err);
-        } else{
-          var data={'status':0,dataList:[]};
-          var str =  JSON.stringify(data); 
-          res.end(str);
-        }  
-      });
-    }
+  pool.getConnection(function(err, connection) {
+    connection.query('select max(c_time) as end from capture_traffic where t_id = '+queryObj.id,function(err,results){
+      if(results[0].end == null){
+        console.log('生成出错');
+        var data={'status':1,message:'生成出错，请等待捕获完成'};
+        var str =  JSON.stringify(data); 
+        res.end(str);
+        return next(err);
+      }else{
+        var queryExpression = 'insert into generate_traffic_info(g_end,t_id,m_id,g_start,g_name,g_desc,g_run_flag) select max(c_time),'+queryObj.id+','+queryObj.machine+','+start+',"'+queryObj.name+'","'+queryObj.desc+'",0'+' from capture_traffic where t_id = '+queryObj.id;
+        console.log(queryExpression);
+        pool.getConnection(function(err, connection) {
+          connection.query(queryExpression,function(err,results){
+            if(err){
+              console.log('生成出错:'+err.message);
+              var data={'status':1,message:'生成出错'};
+              var str =  JSON.stringify(data); 
+              res.end(str);
+              return next(err);
+            } else{
+              var data={'status':0,dataList:[]};
+              var str =  JSON.stringify(data); 
+              res.end(str);
+            } 
+            connection.release(); 
+          });
+        });       
+      }
+      connection.release();
+    });
   });
+  
 });
 app.post('/machineAll', function(req, res,next){
   var queryExpression = 'select m_id as id,m_name as name,m_capture_flag as cap,m_generate_flag as gene,m_valid_flag as valid from machine_info order by m_id DESC';
-  db.query(queryExpression,function(err,results){
+  pool.getConnection(function(err, connection) {
+   connection.query(queryExpression,function(err,results){
       if(err) return next(err);
       if(!results[0]){ //无查询结果
         var message={'status':1,'message':"无查询结果"};
@@ -921,11 +1000,15 @@ app.post('/machineAll', function(req, res,next){
           var str =  JSON.stringify(data); 
           res.end(str);
       }
+      connection.release();
   }); 
+  });
+   
 });
  
 //链接数据库
-var db = mysql.createClient(config);
+var pool = mysql.createPool(config);
+//db.connect();
 app.listen(3000,function(){
   console.log("--listen on 3000");
 });

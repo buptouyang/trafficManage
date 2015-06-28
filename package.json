@@ -8,6 +8,9 @@
     "express": "3.x",
     "node-uuid": "^1.4.1",
     "node-zip": "1.x",
-    "mysql":"0.9.5"
+    "mysql": "0.9.5"
+  },
+  "devDependencies": {
+    "body-parser": "^1.13.1"
   }
 }

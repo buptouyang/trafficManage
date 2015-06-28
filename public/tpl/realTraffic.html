@@ -92,7 +92,7 @@
 
 
 <div class="modal fade" id="addModal">
-<div class="modal-dialog">
+<div class="modal-dialog modal-lg">
   <div class="modal-content"> 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
@@ -109,29 +109,29 @@
 	 	<input size="13" type="text" readonly class="form_datetime" id="cp_endTime" datepicker><span style="font-weight:bold">:</span>
 	  		<input type="number"  min="0" max="59" id="cp_endSec" style="width:65px;">秒 </br>
 	  		</div>	 -->
- 		<div style="margin-top:5px;">
- 		
- 		<label for="" class="Searchlabel">网络协议</label>
-	 	<select name="cp_net_pro" id="cp_netPro">
-	 		<option value="">所有</option>
- 			<option ng-repeat="data in cp_net" value="{{data.id}}">{{data.name}}</option>
- 		</select>
- 		<label for="" class="Searchlabel">传输层协议</label>
-	 	<select name="cp_trans_pro" id="cp_transPro" ng-disabled='cp_transDis'>
-	 		<option value="">所有</option>
-	 		<option ng-repeat="data in cp_trans" value="{{data.id}}">{{data.name}}</option>
- 		</select>
- 		<label for="" class="Searchlabel">端口</label>
-	 	<select name="cp_port" id="cp_portId">
-	 		<option value="">所有</option>
- 			<option value="0">0</option>
- 			<option value="1">1</option>
- 		</select>
- 	</div>	
+<!--  		<div style="margin-top:5px;">
+	
+	<label for="" class="Searchlabel">网络协议</label>
+		 	<select name="cp_net_pro" id="cp_netPro">
+		 		<option value="">所有</option>
+		<option ng-repeat="data in cp_net" value="{{data.id}}">{{data.name}}</option>
+	</select>
+	<label for="" class="Searchlabel">传输层协议</label>
+		 	<select name="cp_trans_pro" id="cp_transPro" ng-disabled='cp_transDis'>
+		 		<option value="">所有</option>
+		 		<option ng-repeat="data in cp_trans" value="{{data.id}}">{{data.name}}</option>
+	</select>
+	<label for="" class="Searchlabel">端口</label>
+		 	<select name="cp_port" id="cp_portId">
+		 		<option value="">所有</option>
+		<option value="0">0</option>
+		<option value="1">1</option>
+	</select>
+	 	</div> -->	
       <table class="table">
 	    <thead>
 	    	<tr>
-	    	<th>编号</th><th>对比流量名称</th><th>描述</th><th>开始时间</th><th>结束时间</th>
+	    	<th>编号</th><th style="word-break:break-all;width:220px">对比流量名称</th><th style="word-break:break-all;width:220px">描述</th><th>开始时间</th><th>结束时间</th>
 	    	</tr>
 	    </thead>
 	    <tbody>

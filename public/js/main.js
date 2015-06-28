@@ -1,5 +1,5 @@
 var routeApp = angular.module('mainContent',['ngRoute']);
-var legendText =['特征',"流量大小特征(MB/S)","包数特征(个)","五元组","分片","包长分布(百分比)"];
+var legendText =['特征',"流量大小特征(MB/S)","包数特征(个)","五元组(个)","分片(个)","包长分布(百分比)"];
 var nameSeries = {size:'流量大小(MB/S)',pkt:'包数(个)',tuple:'五元组(个)',frag:'分片(个)'};
 routeApp.config(['$routeProvider',function($routeProvider){
 	$routeProvider
@@ -131,7 +131,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 				$(".trafficDesc").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
 				$('#pagination-traffic').twbsPagination({
 			        totalPages: data.totalPng,
-			        visiblePages: 3,
+			        visiblePages: 5,
 			        first:'第一页',
 			        prev:'前一页',
 			        next:'后一页',
@@ -534,7 +534,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	watch = setInterval(rt,5000);
     	console.log(watch)
     	function rt(){
-    		type = $('#searchType').val();
+    		var type = $('#searchType').val();
 	    	var port = $("#portId").val();
 	    	var transPro = $('#transPro').val();
 	    	var netPro = $("#netPro").val();
@@ -862,7 +862,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					$.each(data.dataList.time,function(index,item){
 						timeData.push(NormalDate(formalTime+parseInt(item,10)));		
 					});
-					initOption(option_size,legendText[1],[$scope.trafficName],timeData,totalseries['size']);
+					var sizetitle = totalBoolean ? '流量大小(MB)':legendText[1];
+					initOption(option_size,sizetitle,[$scope.trafficName],timeData,totalseries['size']);
 					initOption(option_pkt,legendText[2],[$scope.trafficName],timeData,totalseries['pkt']);
 					initOption(option_tuple,legendText[3],[$scope.trafficName],timeData,totalseries['tuple']);
 					initOption(option_frag,legendText[4],[$scope.trafficName],timeData,totalseries['frag']);
@@ -879,6 +880,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					$('.right_content').css('display','block');
 					var formalTime = UTCDay($scope.mstartTime);
 					var legend = [],totalseries = [];
+					var title = totalBoolean && type == 1 ? '流量大小(MB)':legendText[type];
 					$scope.lenArray[0].len = data.dataList['size'].length;
 					$.each(data.dataList,function(index,item){
 						if(index != 'time' && item.length > 0){
@@ -909,7 +911,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					$.each(data.dataList.time,function(index,item){
 						timeData.push(NormalDate(formalTime+parseInt(item,10)));		
 					});				
-					initOption(option_line,legendText[type],[$scope.trafficName],timeData,totalseries);
+					initOption(option_line,title,[$scope.trafficName],timeData,totalseries);
 					myChart?myChart.clear():'';
 					myChart.setOption(option_line);
 				}
@@ -1279,14 +1281,13 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						item.name = item.name;	
 						item.descript = item.descript;	
 					});
-					//console.log(data.dataList)
-					$scope.$apply(function(){
-						$scope.comInfos = data.dataList;
-					});
+					//console.log(data.dataList);
+					$scope.comInfos = data.dataList;
+					$scope.$apply();
 					$("#addModal .modal-body").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
 					$('#pagination-traffic').twbsPagination({
 				        totalPages: data.totalPng,
-				        visiblePages: 3,
+				        visiblePages: 5,
 				        first:'第一页',
 				        prev:'前一页',
 				        next:'后一页',
