@@ -521,6 +521,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			}
 		}*/		
     }
+    function addPie(option,series){
+    	var len = option.series.length;
+    	var innerRadius = 150+(len-1)*50;
+    	series.radius = [innerRadius,innerRadius+30];
+    	option.series.push(series);
+    }
 /*    $scope.trafficName = trafficInfo.trafficName;
     $scope.mstartTime = trafficInfo.mstartTime;
     $scope.mendTime = trafficInfo.mendTime;
@@ -678,7 +684,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    	});
     	}
     });
-    function search(callback){ 
+    function search(callback){
+    	$scope.type =  $('#searchType').val();
     	type = $('#searchType').val();
     	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
     	//var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
@@ -775,11 +782,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		    calculable : false,
 		    series : []
 		}
-    	$scope.radius = 130;
+    	var pieRadius = 130;
 		var pieSeries = [{
             name:'',
             type:'pie',
-            radius:[0,$scope.radius],
+            radius:[0,pieRadius],
             itemStyle:{
             	normal:{
             		label:{
@@ -934,9 +941,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			obj.desc=$(parentEle[1]).text();
 			obj.start=$(parentEle[2]).text();
 			obj.end=$(parentEle[3]).text()
-			var port = $('#cp_portId').val();
-			var netPro = $('#cp_netPro').val();
-			var transPro = $('#cp_transPro').val();
+			var port = $('#portId').val();
+			var netPro = $('#netPro').val();
+			var transPro = $('#transPro').val();
 			$.ajax({
 				url:'/trafficAll',
 				type:'POST',
@@ -948,14 +955,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						$scope.comCkListdata.push(obj);
 						$scope.$apply();
 						if(type == '5'){
-							var outRadius = $scope.radius+20;
-							$scope.radius += 50;
 							var series = 
 								{
 									name:obj.name,
 									type:'pie',
 									data:[],
-									radius:[outRadius,outRadius+30]
+									radius:[]
 								};
 							$.each(data.dataList,function(index,item){
 						  		for(name in item){
@@ -967,9 +972,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	    							}			
 	    						}			
 							});	
-							addOption(option_pie,'','',series,'normal');
-	    					//console.log(option_pie);
-	    					//myChart?myChart.clear():'';
+							addPie(option_pie,series);
+	    					myChart?myChart.clear():'';
 							myChart.setOption(option_pie);
 						}else{
 							var series = {};
@@ -985,8 +989,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 								addOption(option_line,[obj.name],timeValue,series,'total');
 							}else{
 								addOption(option_line,[obj.name],timeValue,series,'normal');
-							}
-							
+							}				
 							myChart.setOption(option_line);
 						}	
 					}else if(data.status==2){
@@ -995,35 +998,45 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				}
 			});
 		});	
-		
-		console.log(option_line);
 		$('#addModal').modal('hide');
 	});
     $("body").delegate("#dele_confirm","click",function(e){
 		var checkEle = $("input[name='comList']:checked");
-		var type = $('#searchType').val();
-		$.each(checkEle,function(index,item){
-			var sibEle = $(item).parent().siblings();
-			var tid=item.id;
-			var tname = sibEle[0].innerHTML;
-			if(type == '5'){
+		//var type = $('#searchType').val();
+		if($scope.type =='5'){
+			$.each(checkEle,function(index,item){
+				var sibEle = $(item).parent().siblings();
+				var tname = sibEle[0].innerHTML;
+				var tid=item.id;
 				$.each(option_pie.series,function(index,item){
 					if(tname == item.name){
 						option_pie.series.splice(index,1);
 						return false;
 					}
 				});	
-				$.each(option_pie.legend.data,function(index,item){
-					if(tname == item){
-						option_pie.legend.data.splice(index,1);
+				//调整半径
+				$.each(option_pie.series,function(index,item){
+					if(index >0){
+						var innerRadius = 150+(index-1)*50;
+			    		item.radius = [innerRadius,innerRadius+30];
+					}    	
+				});
+				//同步对比流量table
+				$.each($scope.comCkListdata,function(index,data) {
+					if(tid == data.id){
+						$scope.comCkListdata.splice(index,1);
 						return false;
 					}
 				});	
-				var deleLen = checkEle.length;
-				$scope.radius -= 50*deleLen;
+				$scope.$apply();	
 				myChart.clear();
 				myChart.setOption(option_pie);
-			}else{
+			});
+		}else{
+			$.each(checkEle,function(index,item){
+				var sibEle = $(item).parent().siblings();
+				var tname = sibEle[0].innerHTML;
+				var tid=item.id;
 				var maxLen = 0;
 				$.each(option_line.series,function(index,item){
 					if(tname == item.name){
@@ -1054,19 +1067,17 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					option_line.xAxis[0].data.splice(maxLen,timeLen-maxLen);
 					option_line.series[0].data.splice(maxLen,timeLen-maxLen);
 				}
+				$.each($scope.comCkListdata,function(index,data) {
+					if(tid == data.id){
+						$scope.comCkListdata.splice(index,1);
+						return false;
+					}
+				});	
+				$scope.$apply();
 				myChart.clear();
-				myChart.setOption(option_line);
-			}
-			$.each($scope.comCkListdata,function(index,data) {
-				if(tid == data.id){
-					$scope.comCkListdata.splice(index,1);
-					return false;
-				}
+				myChart.setOption(option_line);		
 			});	
-			
-		});	
-		$scope.$apply();
-		
+		}	
 		$('#deleModal').modal('hide');
 	});
 	/*$("body").delegate("#timeScale","change",function(e){
@@ -1152,15 +1163,15 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		}
 		$scope.$apply();
 	});
-	$("#totalUp").change(function(e){  //勾选total时是否要时间比例
-    	/*var totalBoolean = $('#totalUp').prop('checked');
+	/*$("#totalUp").change(function(e){  //勾选total时是否要时间比例
+    	var totalBoolean = $('#totalUp').prop('checked');
 		if(totalBoolean==true){
 			$scope.scaleDis = true;
 		}else{
 			$scope.scaleDis = false;
 		}
-		$scope.$apply();*/
-	});
+		$scope.$apply();
+	});*/
 /*	$("#totalUp").change(function(e){
 		var sdata = JSON.parse(localStorage.getItem('searchData'));
 		var type = $("#searchType").val();
@@ -1281,7 +1292,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 						item.name = item.name;	
 						item.descript = item.descript;	
 					});
-					//console.log(data.dataList);
 					$scope.comInfos = data.dataList;
 					$scope.$apply();
 					$("#addModal .modal-body").append('<ul id="pagination-traffic" class="pagination-sm pull-right"></ul>');
