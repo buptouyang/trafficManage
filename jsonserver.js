@@ -95,6 +95,7 @@ app.post('/trafficDetail', function(req, res,next){
   pool.getConnection(function(err, connection) {
     connection.query(queryExpression,function(err,results){
       console.log(results.length);
+           console.log(results[0],results[1],results[2])
         if(err) return next(err);
           if(!results[0] || results[0].time == null ){ //无查询结果 
               var message={'status':1,'message':"无查询结果"};
@@ -145,6 +146,8 @@ app.post('/trafficDetail', function(req, res,next){
                   data.dataList = value;
                 }else{
                   data.dataList = fomatResult(results);
+                       console.log(results[0],results[1],results[2])
+                       console.log(data.dataList.pkt[0],data.dataList.pkt[1],data.dataList.pkt[2])
                 }             
               }            
               var str =  JSON.stringify(data); 
@@ -587,8 +590,8 @@ app.get('/trafficInfo', function(req, res,next){
   var time=new Date().getTime();
   pool.getConnection(function(err, connection) {
     connection.query(queryExpression,function(err,results){
-     console.log(new Date().getTime()-time)
-     console.log(results.length);
+     console.log('time:',new Date().getTime()-time);
+     console.log('length:',results.length);
         if(err) return next(err);
         if(!results[0]){ //无查询结果
             var message={'status':0,'message':"无查询结果",dataList:[]};
@@ -632,12 +635,12 @@ app.get('/trafficCap', function(req, res,next){
     /*var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
     queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";*/
     var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
-    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic)";
+    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic) order by id DESC";
     //queryExpression+="from traffic_info t left join (select distinct c_time,t_id from testcenter0625.capture_traffic where t_id >0 order by c_time desc limit 1) c on t.t_id=c.t_id";
    // queryExpression+="from traffic_info t left join capture_traffic c using(t_id) group by t.t_id";
   }else{
-    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,max(c.c_time) as end ";
-    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic) and t.t_name like '%"+req.query.queryStr+"%'";
+    var queryExpression="select t.t_id as id,t.t_name as name,t.t_desc as descript,from_unixtime(t.t_start,'%Y/%m/%d %H:%i:%s') as start,from_unixtime(t.t_end,'%Y/%m/%d %H:%i:%s') as end ";
+    queryExpression+="from traffic_info t where t.t_id in (select distinct t_id from capture_traffic) and t.t_name like '%"+req.query.queryStr+"%' order by id DESC";
     //queryExpression+="from traffic_info t left join capture_traffic c using(t_id) where t.t_name like '%"+req.query.queryStr+"%' group by t.t_id";
   }
   console.log(queryExpression);
@@ -647,7 +650,7 @@ app.get('/trafficCap', function(req, res,next){
      console.log(new Date().getTime()-time);
         if(err) return next(err);
           if(!results[0]){ //无查询结果
-              var message={'status':1,'message':"无查询结果"};
+              var message={'status':0,'message':"无查询结果",dataList:[]};
               var str =  JSON.stringify(message);
               res.writeHead(200, {"Content-Type": "text/plain",'charset':'utf-8'}); 
               res.end(str);         
@@ -672,16 +675,16 @@ function fomatResult(results){
   var list = {size:[],pkt:[],tuple:[],frag:[],time:[]}
   results.forEach(function(item,index) {
     list['time'].push(item['time']);
-    if(item['size']){
+    if(item['size'] != null){
       list['size'].push(item['size']);
     }
-    if(item['pkt']){
+    if(item['pkt'] != null){
       list['pkt'].push(item['pkt']);
     }
-    if(item['tuple']){
+    if(item['tuple'] != null){
       list['tuple'].push(item['tuple']);
     }
-    if(item['frag']){
+    if(item['frag'] != null){
       list['frag'].push(item['frag']);
     }             
   });
@@ -734,7 +737,9 @@ app.post('/realTime', function(req, res,next){
 app.post('/trafficAll', function(req, res,next){
   var queryExpression = 'select';
   var queryObj = req.body;
+  console.log(queryObj)
   var type = toInteger(queryObj.type);
+  var scale = toInteger(queryObj.scale);
   switch(type){
     case 1:queryExpression +=" sum(traffic_size) as sumData";break;
     case 2:queryExpression +=" sum(pkt_num) as sumData";break;
@@ -763,16 +768,17 @@ app.post('/trafficAll', function(req, res,next){
         } else {  //有结果
             var data={'status':0,dataList:[]};
             var tempValue = 0;
-            if(req.body.total == 'true'){
-              results.forEach(function(item,index) {
-                var totalvalue = {};
-                tempValue+=toInteger(item.sumData);
-                totalvalue.time = item.time;
-                totalvalue.sumData = tempValue
-                data.dataList.push(totalvalue);
-              });
+            if(type == 5){
+              data.dataList = results;
+              var str =  JSON.stringify(data); 
+              res.end(str);
+              return false;
+            }
+            if(queryObj.total == 'true'){
+              results = totalUp(results);
+              data.dataList = scaleUp(scale,results,1);
             }else{
-              data.dataList=results;
+              data.dataList = scaleUp(scale,results,0); 
             }            
             var str =  JSON.stringify(data); 
             res.end(str);

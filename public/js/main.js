@@ -105,6 +105,7 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 	}
 	$scope.query=function(e){
 		var query = $.trim($('#queryString').val());
+		$("#pagination-traffic").remove();
 		$scope.getList(query,1);
 	}
 	$scope.getList = function(query,page){
@@ -136,7 +137,6 @@ routeApp.controller('manageCtl',function($scope,$http,trafficInfo){
 			        prev:'前一页',
 			        next:'后一页',
 			        last:'最后一页',
-			        startPage:1,
 			        onPageClick: function (event, page) {
 			        	var query = $.trim($('#queryString').val());
 			            $scope.getList(query,page);
@@ -373,7 +373,8 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	            trigger: 'item'
 	        },
 	        legend: {
-	            data:[]
+	            data:[],
+	            padding:[5,5,5,500]
 	        },
 	        toolbox: {
 	            show : false
@@ -418,7 +419,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 		            }
 		        }*/
 	        ],
-	        series : []
+	        series : ['']
 	    };
 	$.ajax({
 		url:'/netInfo',
@@ -435,9 +436,9 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 	$("#netPro").change(function(e){
 		getTransport($("#netPro"),'');
 	});
-	$("#cp_netPro").change(function(e){
+/*	$("#cp_netPro").change(function(e){
 		getTransport($("#cp_netPro"),'cp_');
-	});
+	});*/
 	function getTransport(ele,pre){
 		var id = ele.val();
 		if(id == '' || id == '2'){
@@ -686,7 +687,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     });
     function search(callback){
     	$scope.type =  $('#searchType').val();
-    	type = $('#searchType').val();
+    	$scope.port = $("#portId").val();
+    	$scope.transPro = $('#transPro').val();
+    	$scope.netPro = $("#netPro").val();
+    	$scope.scale = $('#timeScale').val() || 1;
+    	$scope.totalBoolean = $('#totalUp').prop('checked');
+    	
     	var startHour = $("#startTime").val()?(UTCDay($("#startTime").val())-UTCDay($scope.mstartTime)):0;
     	//var startHour = $("#startTime").val()?UTCDay($("#startTime").val()):0;
     	var startSec = $("#startSec").val()?($("#startSec").val()>59?59:parseInt($("#startSec").val(),10)):0;
@@ -695,18 +701,19 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	//var endHour = $("#endTime").val()?UTCDay($("#endTime").val()):0;
     	var endSec = $("#endSec").val()?($("#endSec").val()>59?59:parseInt($("#endSec").val(),10)):0;  
     	var endTime = endHour+endSec;
-    	var timeScale;
-    	var port = $("#portId").val();
-    	var transPro = $('#transPro').val();
-    	var netPro = $("#netPro").val();
     	var tId = $("#mid").val();
-    	var totalBoolean = $('#totalUp').prop('checked');
+    	var timeScale,port,transPr,totalBoolean;
+    	type = $scope.type;
+    	totalBoolean = $scope.totalBoolean;
+    	port = $scope.port;
+    	transPro = $scope.transPro;
+    	netPro = $scope.netPro;
+    	timeScale = $scope.scale;
     	/*if(totalBoolean == true){
     		timeScale = 1;
     	}else{
     		timeScale = $('#timeScale').val() || 1;
     	}*/
-    	timeScale = $('#timeScale').val() || 1;
     	if(startTime && endTime && startTime>endTime){
     		var temp = startTime;
     		startTime=endTime;
@@ -760,7 +767,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
         	clearInterval(watch);
         }
         console.log(watch);
-    	var type;
     	$scope.comCkListdata = [];
     	option_pie = {
 		    title : {
@@ -897,7 +903,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					            data:[]
 					        };
 							lineSeries.data = item;
-							lineSeries.name = nameSeries[index];
+							lineSeries.name = $scope.trafficName;
 							if(index == 'size'){
 								option_line.yAxis[0].axisLabel.formatter=function(value){
 									return Math.round(value/1024/1024);
@@ -931,8 +937,12 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
     	myChart?myChart.clear():'';
 		var checkEle = $("input[name='comCheck']:checked");
 		var checkData = [];
-		var type = $('#searchType').val();
-		var totalBoolean = $('#totalUp').prop('checked');
+		var type = $scope.type;
+		var scale = $scope.scale;
+		var totalBoolean = $scope.totalBoolean;
+		var port = $scope.port;
+		var netPro = $scope.netPro;
+		var transPro = $scope.transPro;
 		$.each(checkEle,function(index,item){
 			var obj={};
 			var parentEle = $(item).parent().siblings();
@@ -941,14 +951,11 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			obj.desc=$(parentEle[1]).text();
 			obj.start=$(parentEle[2]).text();
 			obj.end=$(parentEle[3]).text()
-			var port = $('#portId').val();
-			var netPro = $('#netPro').val();
-			var transPro = $('#transPro').val();
 			$.ajax({
 				url:'/trafficAll',
 				type:'POST',
 				dataType:'json',
-				data:{type:type,id:obj.id,total:totalBoolean,port:port,netPro:netPro,transPro:transPro},
+				data:{type:type,id:obj.id,total:totalBoolean,scale:scale,port:port,netPro:netPro,transPro:transPro},
 				success:function(data){
 					if(data.status==0){
 						var dataValue = [],timeValue = [];
@@ -1302,7 +1309,6 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 				        prev:'前一页',
 				        next:'后一页',
 				        last:'最后一页',
-				        startPage:1,
 				        onPageClick: function (event, page) {
 				        	var query = $.trim($('#queryString').val());
 				            $scope.addCompareTraffic(query,page);
@@ -1312,15 +1318,17 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 			}
 		  });	
 	}
-	$("body").delegate("#query","click",function(e){
+	$("body").delegate("#queryComp","click",function(e){
+		e.stopPropagation();
 		var queryStr = $.trim($("#queryString").val());
 		$("#pagination-traffic").remove();
 		$scope.addCompareTraffic(queryStr,1);
 	})
 	$('#addModal').on('show.bs.modal', function (event) {
 		$("#pagination-traffic").remove();
+		$("#queryString").val('');
 	  	$scope.addCompareTraffic('',1);	
-	  	$.ajax({
+	  	/*$.ajax({
 			url:'/netInfo',
 			type:'get',
 			dataType:'json',
@@ -1331,7 +1339,7 @@ routeApp.controller('realCtl',function($scope,$http,trafficInfo){
 					$scope.$apply();
 				}
 			}
-		});
+		});*/
 	});
 });
 	
